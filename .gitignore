@@ -1,0 +1,6 @@
+build/
+*.com
+*.log
+*.bak
+*~
+.DS_Store
