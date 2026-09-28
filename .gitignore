@@ -23,3 +23,6 @@ voice/processed/
 voice/raw/
 voice/speaker.wav
 generated/
+voice/models/
+voice/private/
+*.pth

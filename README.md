@@ -169,6 +169,19 @@ opcode-orchestra/
 └── README.md
 
 build/ is generated and is not committed.
+## Current pipeline
+
+```text
+ASM dataset -> NASM binary records
+ASM score   -> NASM -> x86 .COM -> OPL2
+Media Opcode v2 -> VGA Mode 13h
+MLAsm bridge -> deterministic scene parameters
+```
+
+## Optional local voice
+
+XTTS v2 is supported only as an optional local voice layer. It is not part of the ASM-native core. Public commits contain code and verification metadata only; model weights, speaker references, generated voice WAV files, and downloaded reference audio stay local. See `docs/XTTS-LOCAL-VERIFICATION.md`.
+
 Project rule
 A successful build is not proof of correct music.
 The project keeps these concepts separate:
@@ -194,6 +207,10 @@ Roadmap
 - [x] ASM-native score DSL (NASM is the compiler)
 - [x] Assembly-generated visualizer
 - [ ] PCM / Sound Blaster backend
+- [x] ASM-native dataset records + negative compile gate
+- [x] Media Opcode v2 + VGA text renderer
+- [x] MLAsm host bridge
+- [x] XTTS local verification receipt (optional/non-ASM)
 License
 Code is MIT licensed.
 Public-domain compositions remain public domain.
