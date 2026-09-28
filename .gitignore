@@ -4,3 +4,4 @@ build/
 *.bak
 *~
 .DS_Store
+dosbox-opl.conf

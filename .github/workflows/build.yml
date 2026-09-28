@@ -1,19 +1,21 @@
 name: build
+
 on:
   push:
   pull_request:
+
 jobs:
   nasm:
     runs-on: ubuntu-latest
+
     steps:
-  - name: Checkout
-    uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  - name: Install NASM
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y nasm make
+      - name: Install NASM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm make
 
-  - name: Build and verify
-    run: make verify
-
+      - name: Build and verify
+        run: make verify
