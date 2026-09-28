@@ -176,6 +176,7 @@ ASM dataset -> NASM binary records
 ASM score   -> NASM -> x86 .COM -> OPL2
 Media Opcode v2 -> VGA Mode 13h
 MLAsm bridge -> deterministic scene parameters
+ASM documentary -> .odoc evidence ledger + cinematic .COM
 ```
 
 ## Optional local voice
@@ -190,6 +191,8 @@ The repository now includes OPL3 mode, stereo routing, a 4-op voice path, OPL rh
 ## ASM Documentary Ledger
 
 A documentary can now be described as Assembly source: `source -> claim -> scene -> cut`. NASM compiles the story ledger to `.odoc` and rejects source-count, claim-count, scene-count, confidence, or runtime drift. The canonical story path contains no JSON/JSONL. See `docs/DOCUMENTARY-MODE.md`.
+
+The cinematic runtime compiles the same ledger into a 45-second VGA/OPL3 documentary with custom palette, letterbox framing, lower thirds, wipes, procedural scenes, stereo FM, percussion cues, and a 4-operator coda. The exact `.odoc` byte sequence is embedded in `documentary.com` and verified at build time.
 
 Project rule
 A successful build is not proof of correct music.
@@ -221,6 +224,7 @@ Roadmap
 - [x] MLAsm host bridge
 - [x] XTTS local verification receipt (optional/non-ASM)
 - [x] ASM documentary source/claim/scene ledger
+- [x] ASM cinematic documentary runtime with embedded evidence ledger
 License
 Code is MIT licensed.
 Public-domain compositions remain public domain.

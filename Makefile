@@ -33,7 +33,12 @@ DOC_LEDGER_SOURCE := documentary/assembly_beneath_wrapper.asm
 DOC_LEDGER_DATA := documentary/assembly_beneath_wrapper.inc
 DOC_ENGINE := engine/documentary.inc
 
-.PHONY: all media score dataset future-audio documentary-ledger verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger verify-all clean
+DOCUMENTARY_TARGET := build/documentary.com
+DOCUMENTARY_SOURCE := showcase/documentary.asm
+DOCUMENTARY_RUNTIME_TEST := tests/documentary_runtime_static.py
+DOCUMENTARY_RUNTIME_ENGINE := engine/vga13.inc engine/font5x7.inc engine/cinematic.inc engine/opl2.inc engine/fnum_notes.inc engine/instruments.inc engine/opl3.inc engine/percussion.inc engine/documentary.inc
+
+.PHONY: all media score dataset future-audio documentary-ledger documentary verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger verify-documentary verify-all clean
 
 all: $(MUSIC_TARGET)
 
@@ -47,6 +52,8 @@ future-audio: $(FUTURE_TARGET) $(SBPCM_TARGET) $(ODE_TARGET) $(BACH_TARGET)
 
 
 documentary-ledger: $(DOC_LEDGER_TARGET)
+
+documentary: $(DOCUMENTARY_TARGET)
 
 build:
 >mkdir -p build
@@ -82,6 +89,10 @@ $(BACH_TARGET): songs/bach_c_major_fragment.asm engine/opl2.inc engine/instrumen
 $(DOC_LEDGER_TARGET): $(DOC_LEDGER_SOURCE) $(DOC_LEDGER_DATA) $(DOC_ENGINE) | build
 >$(NASM) -Wall -I engine/ -I documentary/ -f bin $(DOC_LEDGER_SOURCE) -o $(DOC_LEDGER_TARGET)
 >@printf "BUILT %-24s %s bytes\n" "$(DOC_LEDGER_TARGET)" "$$(wc -c < $(DOC_LEDGER_TARGET))"
+
+$(DOCUMENTARY_TARGET): $(DOCUMENTARY_SOURCE) $(DOCUMENTARY_RUNTIME_ENGINE) $(DOC_LEDGER_DATA) | build
+>$(NASM) -Wall -I engine/ -I documentary/ -f bin $(DOCUMENTARY_SOURCE) -o $(DOCUMENTARY_TARGET)
+>@printf "BUILT %-24s %s bytes\n" "$(DOCUMENTARY_TARGET)" "$$(wc -c < $(DOCUMENTARY_TARGET))"
 
 verify: all
 >@test -s $(MUSIC_TARGET)
@@ -130,7 +141,15 @@ verify-documentary-ledger: documentary-ledger
 >@test -s $(DOC_LEDGER_TARGET)
 >bash tests/documentary_gate.sh
 
-verify-all: verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger
+
+verify-documentary: documentary verify-documentary-ledger
+>@test -s $(DOCUMENTARY_TARGET)
+>$(PYTHON) $(DOCUMENTARY_RUNTIME_TEST)
+>@echo "DOCUMENTARY_BUILD_GATE=PASS"
+>@echo "DOCUMENTARY_RUNTIME=45.00_SECONDS"
+>@sha256sum $(DOCUMENTARY_TARGET)
+
+verify-all: verify verify-media verify-score verify-dataset verify-future verify-documentary
 >@echo "OPCODE_ORCHESTRA_GATE=PASS"
 
 clean:
