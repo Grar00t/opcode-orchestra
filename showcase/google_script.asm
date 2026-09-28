@@ -1,16 +1,15 @@
 ; =============================================================================
-; google_script.asm — professional showcase text (no face, no licensed music)
-; Linux x86-64, raw syscalls, UTF-8 English
-;
-;   nasm -f elf64 google_script.asm -o google_script.o
-;   ld -o google_script google_script.o
-;   ./google_script
+; google_script.asm — Hardened Manifesto Outputter
+; Linux x86-64, raw syscalls, W^X compliant, partial-write safe
 ; =============================================================================
 
 BITS 64
 DEFAULT REL
 
-section .text
+; -----------------------------------------------------------------------------
+; READ-ONLY DATA SECTION (Mapped as R-- in memory, enforcing NX bit)
+; -----------------------------------------------------------------------------
+section .rodata
 
 script:
 db 10
@@ -150,14 +149,42 @@ script_end:
 
 script_len equ script_end - script
 
+; -----------------------------------------------------------------------------
+; EXECUTABLE CODE SECTION (Mapped as R-X in memory)
+; -----------------------------------------------------------------------------
+section .text
 global _start
-_start:
-        mov     eax, 1              ; sys_write
-        mov     edi, 1              ; stdout
-        lea     rsi, [rel script]
-        mov     edx, script_len
-        syscall
 
-        xor     edi, edi            ; exit 0
-        mov     eax, 60
-        syscall
+_start:
+    ; Initialize buffer pointers and lengths
+    lea     rsi, [rel script]
+    mov     rdx, script_len
+    mov     edi, 1              ; File descriptor: stdout
+
+.write_loop:
+    test    rdx, rdx
+    jz      .exit_success       ; All bytes written successfully
+
+    mov     eax, 1              ; sys_write
+    syscall
+
+    ; Error handling: sys_write returns -1 on error (rax < 0)
+    test    rax, rax
+    js      .exit_failure       ; Jump if Sign Flag is set (negative return)
+
+    ; Handle partial writes: advance buffer, decrease remaining count
+    sub     rdx, rax
+    add     rsi, rax
+    jmp     .write_loop
+
+.exit_failure:
+    ; Exit with code 1 on I/O error
+    mov     edi, 1
+    mov     eax, 60             ; sys_exit
+    syscall
+
+.exit_success:
+    ; Exit with code 0 on success
+    xor     edi, edi
+    mov     eax, 60             ; sys_exit
+    syscall
