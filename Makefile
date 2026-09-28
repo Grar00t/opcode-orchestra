@@ -28,7 +28,12 @@ ODE_TARGET := build/ode.com
 BACH_TARGET := build/bach.com
 FUTURE_TEST := tests/future_audio_static.py
 
-.PHONY: all media score dataset future-audio verify verify-media verify-score verify-dataset verify-future verify-all clean
+DOC_LEDGER_TARGET := build/assembly-documentary.odoc
+DOC_LEDGER_SOURCE := documentary/assembly_beneath_wrapper.asm
+DOC_LEDGER_DATA := documentary/assembly_beneath_wrapper.inc
+DOC_ENGINE := engine/documentary.inc
+
+.PHONY: all media score dataset future-audio documentary-ledger verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger verify-all clean
 
 all: $(MUSIC_TARGET)
 
@@ -39,6 +44,9 @@ score: $(ASM_SCORE_TARGET)
 dataset: $(DATASET_TARGET)
 
 future-audio: $(FUTURE_TARGET) $(SBPCM_TARGET) $(ODE_TARGET) $(BACH_TARGET)
+
+
+documentary-ledger: $(DOC_LEDGER_TARGET)
 
 build:
 >mkdir -p build
@@ -70,6 +78,10 @@ $(ODE_TARGET): songs/ode_to_joy.asm engine/opl2.inc engine/instruments.inc engin
 
 $(BACH_TARGET): songs/bach_c_major_fragment.asm engine/opl2.inc engine/instruments.inc engine/fnum_notes.inc engine/score.inc | build
 >$(NASM) -Wall -I engine/ -f bin songs/bach_c_major_fragment.asm -o $(BACH_TARGET)
+
+$(DOC_LEDGER_TARGET): $(DOC_LEDGER_SOURCE) $(DOC_LEDGER_DATA) $(DOC_ENGINE) | build
+>$(NASM) -Wall -I engine/ -I documentary/ -f bin $(DOC_LEDGER_SOURCE) -o $(DOC_LEDGER_TARGET)
+>@printf "BUILT %-24s %s bytes\n" "$(DOC_LEDGER_TARGET)" "$$(wc -c < $(DOC_LEDGER_TARGET))"
 
 verify: all
 >@test -s $(MUSIC_TARGET)
@@ -113,7 +125,12 @@ verify-future: future-audio
 >@echo "FUTURE_AUDIO_BUILD_GATE=PASS"
 >@sha256sum $(FUTURE_TARGET) $(SBPCM_TARGET) $(ODE_TARGET) $(BACH_TARGET)
 
-verify-all: verify verify-media verify-score verify-dataset verify-future
+
+verify-documentary-ledger: documentary-ledger
+>@test -s $(DOC_LEDGER_TARGET)
+>bash tests/documentary_gate.sh
+
+verify-all: verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger
 >@echo "OPCODE_ORCHESTRA_GATE=PASS"
 
 clean:

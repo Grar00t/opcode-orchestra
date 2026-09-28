@@ -186,6 +186,11 @@ Future Audio Pack
 
 The repository now includes OPL3 mode, stereo routing, a 4-op voice path, OPL rhythm percussion, four switchable OPL instruments, a Sound Blaster 8-bit PCM/DMA backend, two additional public-domain score studies, and an audio-reactive VGA demo. `make verify-future` builds every artifact and runs source-contract gates. Audible hardware/emulator verification remains a separate verification layer. See `docs/FUTURE-AUDIO.md`.
 
+
+## ASM Documentary Ledger
+
+A documentary can now be described as Assembly source: `source -> claim -> scene -> cut`. NASM compiles the story ledger to `.odoc` and rejects source-count, claim-count, scene-count, confidence, or runtime drift. The canonical story path contains no JSON/JSONL. See `docs/DOCUMENTARY-MODE.md`.
+
 Project rule
 A successful build is not proof of correct music.
 The project keeps these concepts separate:
@@ -215,6 +220,7 @@ Roadmap
 - [x] Media Opcode v2 + VGA text renderer
 - [x] MLAsm host bridge
 - [x] XTTS local verification receipt (optional/non-ASM)
+- [x] ASM documentary source/claim/scene ledger
 License
 Code is MIT licensed.
 Public-domain compositions remain public domain.
