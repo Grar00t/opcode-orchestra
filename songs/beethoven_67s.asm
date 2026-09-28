@@ -4,6 +4,7 @@ ORG 100h
 jmp start
 
 %include "opl2.inc"
+%include "score.inc"
 
 ; =============================================================================
 ; Opcode Orchestra
@@ -31,12 +32,6 @@ jmp start
 
 %define EIGHTH 28
 
-%assign SCORE_CS 0
-
-%macro EV 2
-    dw %1, %2
-    %assign SCORE_CS SCORE_CS + %2
-%endmacro
 
 start:
     cld
@@ -68,6 +63,7 @@ start:
     int 21h
 
 score:
+    SCORE_BEGIN 6700
 
 ; =============================================================================
 ; 00:00.00 — ORIGINAL OPENING
@@ -215,12 +211,4 @@ score:
     EV N_D,  166
     EV N_C,  266
 
-    dw 0FFFFh, 0
-
-; =============================================================================
-; COMPILE-TIME DURATION GATE
-; =============================================================================
-
-%if SCORE_CS != 6700
-    %error "Score duration is not exactly 6700 centiseconds"
-%endif
+    SCORE_END

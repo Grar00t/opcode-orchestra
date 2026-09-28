@@ -23,6 +23,40 @@ And no synthetic humans were generated during this build.
 
 ---
 
+## ASM-native score format
+
+Music is authored directly as NASM source. The Assembly is the data format.
+There is no JSONL score and no score-to-Assembly converter.
+
+```asm
+SCORE_BEGIN 2400
+EV N_G,  25
+EV R,    10
+EV N_EB, 50
+SCORE_END
+```
+
+`SCORE_END` emits the runtime sentinel and validates the declared duration at assembly time.
+See `docs/ASM_SCORE_FORMAT.md` and `songs/wrapper_ledger_theme.asm`.
+
+---
+
+## ASM-native dataset format
+
+Training/example data can also be authored directly as NASM source.
+The dataset is Assembly, not JSONL. NASM emits a fixed-record binary dataset and validates record count at build time.
+
+```asm
+DATASET_BEGIN 24
+DS_SAMPLE 0, 0, R,   N_C, 50
+DS_SAMPLE 0, 1, N_C, N_G, 50
+DATASET_END
+```
+
+See `docs/ASM_DATASET_FORMAT.md` and `datasets/wrapper_ledger_music_dataset.asm`.
+
+---
+
 ## Demo
 
 The primary demo is:
@@ -157,8 +191,8 @@ Roadmap
 - [ ] 4-operator OPL3 voices
 - [ ] Stereo placement
 - [ ] Percussion channel
-- [ ] Score compiler
-- [ ] Assembly-generated visualizer
+- [x] ASM-native score DSL (NASM is the compiler)
+- [x] Assembly-generated visualizer
 - [ ] PCM / Sound Blaster backend
 License
 Code is MIT licensed.
