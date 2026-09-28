@@ -182,6 +182,10 @@ MLAsm bridge -> deterministic scene parameters
 
 XTTS v2 is supported only as an optional local voice layer. It is not part of the ASM-native core. Public commits contain code and verification metadata only; model weights, speaker references, generated voice WAV files, and downloaded reference audio stay local. See `docs/XTTS-LOCAL-VERIFICATION.md`.
 
+Future Audio Pack
+
+The repository now includes OPL3 mode, stereo routing, a 4-op voice path, OPL rhythm percussion, four switchable OPL instruments, a Sound Blaster 8-bit PCM/DMA backend, two additional public-domain score studies, and an audio-reactive VGA demo. `make verify-future` builds every artifact and runs source-contract gates. Audible hardware/emulator verification remains a separate verification layer. See `docs/FUTURE-AUDIO.md`.
+
 Project rule
 A successful build is not proof of correct music.
 The project keeps these concepts separate:
@@ -198,15 +202,15 @@ Roadmap
 - [x] Centisecond timing
 - [x] 67-second demonstration
 - [x] Compile-time runtime gate
-- [ ] Additional public-domain scores
-- [ ] Multiple instruments
-- [ ] OPL3 mode
-- [ ] 4-operator OPL3 voices
-- [ ] Stereo placement
-- [ ] Percussion channel
+- [x] Additional public-domain scores
+- [x] Multiple instruments
+- [x] OPL3 mode
+- [x] 4-operator OPL3 voices
+- [x] Stereo placement
+- [x] Percussion channel
 - [x] ASM-native score DSL (NASM is the compiler)
 - [x] Assembly-generated visualizer
-- [ ] PCM / Sound Blaster backend
+- [x] PCM / Sound Blaster backend
 - [x] ASM-native dataset records + negative compile gate
 - [x] Media Opcode v2 + VGA text renderer
 - [x] MLAsm host bridge

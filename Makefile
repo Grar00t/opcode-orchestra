@@ -20,7 +20,15 @@ DATASET_TARGET := build/wledger-dataset.bin
 DATASET_SOURCE := datasets/wrapper_ledger_music_dataset.asm
 DATASET_ENGINE := engine/dataset.inc
 
-.PHONY: all media score dataset verify verify-media verify-score verify-dataset verify-all clean
+FUTURE_TARGET := build/future-audio.com
+FUTURE_SOURCE := showcase/future_audio.asm
+SBPCM_TARGET := build/sbpcm.com
+SBPCM_SOURCE := showcase/sbpcm_demo.asm
+ODE_TARGET := build/ode.com
+BACH_TARGET := build/bach.com
+FUTURE_TEST := tests/future_audio_static.py
+
+.PHONY: all media score dataset future-audio verify verify-media verify-score verify-dataset verify-future verify-all clean
 
 all: $(MUSIC_TARGET)
 
@@ -29,6 +37,8 @@ media: $(MEDIA_TARGET)
 score: $(ASM_SCORE_TARGET)
 
 dataset: $(DATASET_TARGET)
+
+future-audio: $(FUTURE_TARGET) $(SBPCM_TARGET) $(ODE_TARGET) $(BACH_TARGET)
 
 build:
 >mkdir -p build
@@ -48,6 +58,18 @@ $(ASM_SCORE_TARGET): $(ASM_SCORE_SOURCE) $(ASM_SCORE_ENGINE) | build
 $(DATASET_TARGET): $(DATASET_SOURCE) $(DATASET_ENGINE) | build
 >$(NASM) -Wall -I engine/ -f bin $(DATASET_SOURCE) -o $(DATASET_TARGET)
 >@printf "BUILT %-24s %s bytes\n" "$(DATASET_TARGET)" "$$(wc -c < $(DATASET_TARGET))"
+
+$(FUTURE_TARGET): $(FUTURE_SOURCE) engine/opl2.inc engine/opl3.inc engine/instruments.inc engine/percussion.inc engine/vga13.inc engine/fnum_notes.inc | build
+>$(NASM) -Wall -I engine/ -f bin $(FUTURE_SOURCE) -o $(FUTURE_TARGET)
+
+$(SBPCM_TARGET): $(SBPCM_SOURCE) engine/sbpcm.inc | build
+>$(NASM) -Wall -I engine/ -f bin $(SBPCM_SOURCE) -o $(SBPCM_TARGET)
+
+$(ODE_TARGET): songs/ode_to_joy.asm engine/opl2.inc engine/instruments.inc engine/fnum_notes.inc engine/score.inc | build
+>$(NASM) -Wall -I engine/ -f bin songs/ode_to_joy.asm -o $(ODE_TARGET)
+
+$(BACH_TARGET): songs/bach_c_major_fragment.asm engine/opl2.inc engine/instruments.inc engine/fnum_notes.inc engine/score.inc | build
+>$(NASM) -Wall -I engine/ -f bin songs/bach_c_major_fragment.asm -o $(BACH_TARGET)
 
 verify: all
 >@test -s $(MUSIC_TARGET)
@@ -82,7 +104,16 @@ verify-dataset: dataset
 >@echo "ASM_DATASET_FORMAT=NASM_NATIVE"
 >@sha256sum $(DATASET_TARGET)
 
-verify-all: verify verify-media verify-score verify-dataset
+verify-future: future-audio
+>@test -s $(FUTURE_TARGET)
+>@test -s $(SBPCM_TARGET)
+>@test -s $(ODE_TARGET)
+>@test -s $(BACH_TARGET)
+>$(PYTHON) $(FUTURE_TEST)
+>@echo "FUTURE_AUDIO_BUILD_GATE=PASS"
+>@sha256sum $(FUTURE_TARGET) $(SBPCM_TARGET) $(ODE_TARGET) $(BACH_TARGET)
+
+verify-all: verify verify-media verify-score verify-dataset verify-future
 >@echo "OPCODE_ORCHESTRA_GATE=PASS"
 
 clean:
