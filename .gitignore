@@ -1,7 +1,24 @@
-build/
-*.com
-*.log
+
+# Never publish generated/reference media
+# Private / generated audio references
+*.aac
 *.bak
+*.com
+*.flac
+*.log
+*.m4a
+*.mp3
+*.mp4
+*.ogg
+*.opus
+*.wav
+*.webm
 *~
 .DS_Store
+build/
 dosbox-opl.conf
+voice/downloads-normalized/
+voice/final/
+voice/processed/
+voice/raw/
+voice/speaker.wav
