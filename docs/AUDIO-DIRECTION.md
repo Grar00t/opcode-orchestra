@@ -2,31 +2,23 @@
 
 ## Source policy
 
-Flow-generated tracks are private analysis references only.
+Reference recordings are private analysis inputs only. They may be used to study tempo, arrangement, section boundaries, rhythmic density, loudness, bass movement, percussion placement, silence, and transition timing.
 
-They are used to study:
+Reference recordings are not committed to the public repository and are not copied into the final master.
 
-- tempo
-- arrangement
-- section boundaries
-- rhythmic density
-- loudness
-- bass movement
-- percussion placement
-- silence and transition timing
+## Canonical production chain
 
-Reference recordings are not committed to the public repository
-and are not copied into the final master.
-
-## Production chain
-
-Flow reference
-    ↓ analysis only
-Assembly OPL rhythm + bass + stabs
-    +
-XTTS original / non-impersonated voice
+ASM-native score / dataset
     ↓
-original final mix
+NASM / x86
+    ↓
+OPL2 + VGA deterministic output
+
+## Optional local voice layer
+
+XTTS v2 may be used locally for an original or explicitly authorized reference voice. It is outside the ASM-native core and is not required to build or verify Opcode Orchestra.
+
+The public repository contains code and verification metadata only. Model weights, speaker references, generated voice WAVs, and downloaded source audio remain local/private.
 
 ## Current musical target
 
@@ -58,3 +50,4 @@ Every transient is intentional.
 No celebrity voice impersonation.
 No borrowed commercial composition.
 No public redistribution of reference audio.
+No claim that XTTS output is Assembly-native.

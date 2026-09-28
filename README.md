@@ -23,6 +23,40 @@ And no synthetic humans were generated during this build.
 
 ---
 
+## ASM-native score format
+
+Music is authored directly as NASM source. The Assembly is the data format.
+There is no JSONL score and no score-to-Assembly converter.
+
+```asm
+SCORE_BEGIN 2400
+EV N_G,  25
+EV R,    10
+EV N_EB, 50
+SCORE_END
+```
+
+`SCORE_END` emits the runtime sentinel and validates the declared duration at assembly time.
+See `docs/ASM_SCORE_FORMAT.md` and `songs/wrapper_ledger_theme.asm`.
+
+---
+
+## ASM-native dataset format
+
+Training/example data can also be authored directly as NASM source.
+The dataset is Assembly, not JSONL. NASM emits a fixed-record binary dataset and validates record count at build time.
+
+```asm
+DATASET_BEGIN 24
+DS_SAMPLE 0, 0, R,   N_C, 50
+DS_SAMPLE 0, 1, N_C, N_G, 50
+DATASET_END
+```
+
+See `docs/ASM_DATASET_FORMAT.md` and `datasets/wrapper_ledger_music_dataset.asm`.
+
+---
+
 ## Demo
 
 The primary demo is:
@@ -135,6 +169,31 @@ opcode-orchestra/
 └── README.md
 
 build/ is generated and is not committed.
+## Current pipeline
+
+```text
+ASM dataset -> NASM binary records
+ASM score   -> NASM -> x86 .COM -> OPL2
+Media Opcode v2 -> VGA Mode 13h
+MLAsm bridge -> deterministic scene parameters
+ASM documentary -> .odoc evidence ledger + cinematic .COM
+```
+
+## Optional local voice
+
+XTTS v2 is supported only as an optional local voice layer. It is not part of the ASM-native core. Public commits contain code and verification metadata only; model weights, speaker references, generated voice WAV files, and downloaded reference audio stay local. See `docs/XTTS-LOCAL-VERIFICATION.md`.
+
+Future Audio Pack
+
+The repository now includes OPL3 mode, stereo routing, a 4-op voice path, OPL rhythm percussion, four switchable OPL instruments, a Sound Blaster 8-bit PCM/DMA backend, two additional public-domain score studies, and an audio-reactive VGA demo. `make verify-future` builds every artifact and runs source-contract gates. Audible hardware/emulator verification remains a separate verification layer. See `docs/FUTURE-AUDIO.md`.
+
+
+## ASM Documentary Ledger
+
+A documentary can now be described as Assembly source: `source -> claim -> scene -> cut`. NASM compiles the story ledger to `.odoc` and rejects source-count, claim-count, scene-count, confidence, or runtime drift. The canonical story path contains no JSON/JSONL. See `docs/DOCUMENTARY-MODE.md`.
+
+The cinematic runtime compiles the same ledger into a 45-second VGA/OPL3 documentary with custom palette, letterbox framing, lower thirds, wipes, procedural scenes, stereo FM, percussion cues, and a 4-operator coda. The exact `.odoc` byte sequence is embedded in `documentary.com` and verified at build time.
+
 Project rule
 A successful build is not proof of correct music.
 The project keeps these concepts separate:
@@ -151,15 +210,21 @@ Roadmap
 - [x] Centisecond timing
 - [x] 67-second demonstration
 - [x] Compile-time runtime gate
-- [ ] Additional public-domain scores
-- [ ] Multiple instruments
-- [ ] OPL3 mode
-- [ ] 4-operator OPL3 voices
-- [ ] Stereo placement
-- [ ] Percussion channel
-- [ ] Score compiler
-- [ ] Assembly-generated visualizer
-- [ ] PCM / Sound Blaster backend
+- [x] Additional public-domain scores
+- [x] Multiple instruments
+- [x] OPL3 mode
+- [x] 4-operator OPL3 voices
+- [x] Stereo placement
+- [x] Percussion channel
+- [x] ASM-native score DSL (NASM is the compiler)
+- [x] Assembly-generated visualizer
+- [x] PCM / Sound Blaster backend
+- [x] ASM-native dataset records + negative compile gate
+- [x] Media Opcode v2 + VGA text renderer
+- [x] MLAsm host bridge
+- [x] XTTS local verification receipt (optional/non-ASM)
+- [x] ASM documentary source/claim/scene ledger
+- [x] ASM cinematic documentary runtime with embedded evidence ledger
 License
 Code is MIT licensed.
 Public-domain compositions remain public domain.
