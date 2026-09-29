@@ -1,0 +1,34 @@
+name: audit-tool-acquisition
+on:
+  push:
+    branches: [audit/hardening-20260929]
+    paths: [.github/workflows/audit-tools.yml]
+permissions:
+  contents: read
+jobs:
+  acquire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: Grar00t/MLAsm
+          ref: 16e5598ad8b4870f95cf19b9f413050b87cffd34
+          persist-credentials: false
+      - name: Export pinned source and verification-only wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir audit-export
+          git archive HEAD > audit-export/mlasm.tar
+          git rev-parse HEAD > audit-export/mlasm-revision.txt
+          python3 -m pip download --no-deps --only-binary=:all: unicorn==2.1.4 -d audit-export
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          cp "$(go env GOPATH)/bin/actionlint" audit-export/actionlint
+          (cd audit-export && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: opcode-audit-tools
+          path: audit-export/*
+          retention-days: 7
+          if-no-files-found: error
