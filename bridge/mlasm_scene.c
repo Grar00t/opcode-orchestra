@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
     printf("STATE_TRANSITION=1\n");
     printf("MLASM_BRIDGE=PASS\n");
     printf("MLASM_VERSION=%s\n", ml_get_version());
-    printf("CPU_SUPPORTED=1\n");
+    printf("CPU_SUPPORTED=YES\n");
     printf("THEME_INDEX=%zu\n", theme_idx);
     printf("THEME=%s\n", theme->name);
     for (size_t i = 0; i < THEME_CLASS_DIM; ++i) {
