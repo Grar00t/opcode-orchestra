@@ -1,0 +1,56 @@
+name: audit-baseline-acquisition
+
+on:
+  push:
+    branches: [audit/hardening-20260929]
+    paths: [.github/workflows/audit-bootstrap.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-baseline-acquisition-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acquire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 5070ae12d1c955d4320a3b0dffe1f025262302c4
+          persist-credentials: false
+      - name: Install audit-only tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y nasm shellcheck
+      - name: Export public tracked baseline and packaged tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir audit-export
+          test "$(git rev-parse HEAD)" = 5070ae12d1c955d4320a3b0dffe1f025262302c4
+          git archive --format=tar HEAD > audit-export/source.tar
+          git cat-file commit HEAD > audit-export/commit.raw
+          git ls-tree -r HEAD > audit-export/tracked-files.txt
+          tar -cf audit-export/toolchain.tar -C /usr/bin nasm ndisasm shellcheck
+          {
+            uname -a
+            nasm -v
+            shellcheck --version
+            dpkg-query -W -f='${Package}\t${Version}\n' nasm shellcheck
+          } > audit-export/toolchain.txt
+          (cd audit-export && sha256sum source.tar commit.raw tracked-files.txt toolchain.tar toolchain.txt > SHA256SUMS)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opcode-baseline-5070ae1
+          path: |
+            audit-export/source.tar
+            audit-export/commit.raw
+            audit-export/tracked-files.txt
+            audit-export/toolchain.tar
+            audit-export/toolchain.txt
+            audit-export/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
