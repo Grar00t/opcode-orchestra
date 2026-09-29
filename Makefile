@@ -10,7 +10,7 @@ export LC_ALL := C
 export PYTHONDONTWRITEBYTECODE := 1
 
 ENGINE := $(wildcard engine/*.inc)
-BUILD_INPUTS := $(ENGINE) Makefile scripts/build.py scripts/artifacts.py
+BUILD_INPUTS := $(ENGINE) Makefile scripts/build.py scripts/artifacts.py scripts/nasm_policy.py
 CORE := b567 wledger ode bach media future documentary sbpcm oplsmoke dataset ledger
 COMS := build/b567.com build/wledger.com build/ode.com build/bach.com build/media-v2.com build/future-audio.com build/documentary.com build/sbpcm.com build/oplsmoke.com
 DATA := build/wledger-dataset.bin build/assembly-documentary.odoc

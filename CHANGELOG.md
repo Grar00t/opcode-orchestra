@@ -4,7 +4,9 @@
 
 NASM 3.01 compatibility now keeps warnings-as-errors while allowing the specific
 `reloc-abs-word` class required by ordinary 16-bit absolute addresses in flat
-DOS binaries. A regression compiles that exact construct. `.gitattributes`
+DOS binaries. The exception is version-gated so the documented NASM 2.16.01
+reference path does not receive a relocation warning name it does not recognize.
+A regression compiles the exact construct and asserts its `ORG 100h` immediate bytes. `.gitattributes`
 forces LF for executable/source text so Windows checkout policy cannot break
 Bash verification or alter source bytes used by deterministic manifests.
 

@@ -10,6 +10,9 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import reproduce
 import publish
+import nasm_policy
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dosboxx_audio_capture as audio_capture
 
 class HostTools(unittest.TestCase):
     def setUp(self):
@@ -125,6 +128,33 @@ class HostTools(unittest.TestCase):
         env.pop('SPEAKER_IDX')
         env['SPEAKER'] = str(model/'absent-reference')
         self.assertEqual(self.command(*command, env=env).returncode, 21)
+
+    def test_nasm_warning_policy_is_version_gated(self):
+        original = nasm_policy.version
+        try:
+            nasm_policy.version = lambda assembler: (2, 16)
+            self.assertEqual(nasm_policy.strict_args('nasm', 'reloc-abs-word'), ['-w+all', '-Werror'])
+            nasm_policy.version = lambda assembler: (3, 1)
+            self.assertEqual(nasm_policy.strict_args('nasm', 'reloc-abs-word'),
+                             ['-w+all', '-Werror', '-w-reloc-abs-word'])
+        finally:
+            nasm_policy.version = original
+
+    def test_audio_pcm16le_and_clipping_endpoints(self):
+        self.assertEqual(audio_capture.pcm16le(b'\xff\x7f\x00\x80\x01\x80'), [32767, -32768, -32767])
+        samples = [32766, -32767] * (49716 * 3)
+        wav = Path(self.temporary.name) / 'near-full-scale.wav'
+        import wave, struct
+        with wave.open(str(wav), 'wb') as out:
+            out.setnchannels(2); out.setsampwidth(2); out.setframerate(49716)
+            out.writeframes(struct.pack('<' + 'h' * len(samples), *samples))
+        self.assertEqual(audio_capture.inspect_wav(wav)['clipped'], 0)
+        samples[0] = 32767
+        with wave.open(str(wav), 'wb') as out:
+            out.setnchannels(2); out.setsampwidth(2); out.setframerate(49716)
+            out.writeframes(struct.pack('<' + 'h' * len(samples), *samples))
+        with self.assertRaisesRegex(ValueError, 'full-scale clipped'):
+            audio_capture.inspect_wav(wav)
 
     def test_optional_tools_fail_without_configuration(self):
         env = os.environ.copy()

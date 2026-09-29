@@ -4,10 +4,13 @@ from pathlib import Path
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import nasm_policy
 
 class Contracts(unittest.TestCase):
     def compile(self, source, expected=None):
@@ -16,7 +19,7 @@ class Contracts(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='opcode-contract-') as directory:
             source_file = Path(directory) / 'case.asm'
             source_file.write_text(source + '\n%define OO_BUILD_COM 0\n%include "manifest.inc"\nOO_FINALIZE\n')
-            result = subprocess.run([nasm, '-w+all', '-Werror', '-w-reloc-abs-word', '-I', str(ROOT / 'engine') + '/',
+            result = subprocess.run([nasm, *nasm_policy.strict_args(nasm, 'reloc-abs-word'), '-I', str(ROOT / 'engine') + '/',
                                      '-f', 'bin', str(source_file), '-o', str(Path(directory) / 'case.bin')],
                                     capture_output=True, text=True, timeout=10)
             if expected is None:

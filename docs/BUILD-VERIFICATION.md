@@ -13,6 +13,9 @@ This is deliberate: `.COM` uses `ORG 100h`, so an absolute label is the load-tim
 segment offset. A contract test asserts the emitted `mov dx,label` immediate is
 `0103h`; replacing it with `label-$$` would emit `0003h` unless runtime code
 adds the missing base, and therefore is not a semantics-preserving warning fix.
+The follow-up relocation warning exceptions are enabled only for NASM 3.01+; the
+documented NASM 2.16.01 reference path keeps the same warnings-as-errors policy
+without receiving warning names it does not recognize.
 The ELF64 showcase separately permits `reloc-rel-dword` for the expected PC-relative
 cross-section reference from `.text` to `.rodata`; the ELF linker resolves it.
 All other NASM warnings remain errors.

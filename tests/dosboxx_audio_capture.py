@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Verify emulated OPL output capture in DOSBox-X; not listening or hardware proof."""
-from array import array
 import hashlib
 import os
 from pathlib import Path
@@ -21,6 +20,10 @@ def need(condition, message):
 def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def pcm16le(data):
+    need(len(data) % 2 == 0, 'PCM16 byte length is not even')
+    return [sample for (sample,) in struct.iter_unpack('<h', data)]
+
 def inspect_wav(path):
     with wave.open(str(path), 'rb') as source:
         channels = source.getnchannels()
@@ -32,11 +35,10 @@ def inspect_wav(path):
     need(width == 2, f'WAV sample width={width}, expected PCM16')
     need(rate == 49716, f'WAV rate={rate}, expected configured OPL rate')
     need(frames > 0 and len(pcm) == frames * channels * width, 'WAV PCM length mismatch')
-    samples = array('h')
-    samples.frombytes(pcm)
+    samples = pcm16le(pcm)
     peak = max((abs(sample) for sample in samples), default=0)
     nonzero = sum(sample != 0 for sample in samples)
-    clipped = sum(abs(sample) >= 32767 for sample in samples)
+    clipped = sum(sample in (-32768, 32767) for sample in samples)
     left_nonzero = sum(samples[i] != 0 for i in range(0, len(samples), 2))
     right_nonzero = sum(samples[i] != 0 for i in range(1, len(samples), 2))
     duration = frames / rate
