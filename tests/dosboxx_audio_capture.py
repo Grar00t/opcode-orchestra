@@ -76,10 +76,22 @@ def inspect_dro(path):
         register = mapping[index] | (0x100 if code & 0x80 else 0)
         writes.append((register, value))
     need(hardware == 0, f'raw OPL2 smoke unexpectedly used hardware mode {hardware}')
-    key_on = sum(reg == 0xb0 and bool(value & 0x20) for reg, value in writes)
-    key_off = sum(reg == 0xb0 and not bool(value & 0x20) for reg, value in writes)
-    need(key_on == 1, f'DRO expected one channel-0 key-on, got {key_on}')
-    need(key_off == 1, f'DRO expected one channel-0 key-off, got {key_off}')
+    key_on = 0
+    key_off = 0
+    key_state = False
+    for register, value in writes:
+        if register != 0xb0:
+            continue
+        new_state = bool(value & 0x20)
+        if new_state == key_state:
+            continue
+        if new_state:
+            key_on += 1
+        else:
+            key_off += 1
+        key_state = new_state
+    need(key_on == 1, f'DRO expected one channel-0 key-on transition, got {key_on}')
+    need(key_off == 1, f'DRO expected one channel-0 key-off transition, got {key_off}')
     return {'commands': commands, 'milliseconds': milliseconds,
             'hardware': hardware, 'writes': len(writes),
             'key_on': key_on, 'key_off': key_off}
@@ -119,7 +131,7 @@ sbbase=220
 irq=7
 dma=1
 hdma=5
-oplmode=opl3
+oplmode=opl2
 oplemu=nuked
 oplrate=49716
 ''', encoding='ascii')
