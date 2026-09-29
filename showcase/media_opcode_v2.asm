@@ -3,6 +3,8 @@ ORG 100h
 
 jmp start
 
+%include "status.inc"
+
 %include "vga13.inc"
 %include "font5x7.inc"
 %include "media_ops.inc"
@@ -10,10 +12,14 @@ jmp start
 start:
     push cs
     pop ds
+    cld
     call vga_mode13
+    jc video_failure
 
     mov si, scene
+    mov di, scene_end
     call media_execute
+    jc media_failure
 
     xor ah, ah
     int 16h
@@ -67,3 +73,17 @@ scene_end:
 %if (scene_end - scene) > 512
     %error "media opcode demo exceeds 512-byte contract"
 %endif
+
+video_failure:
+    mov al, OO_VIDEO
+    jmp program_failure
+
+media_failure:
+    mov al, OO_MEDIA
+    jmp program_failure
+
+program_failure:
+    push ax
+    call vga_text_mode
+    pop ax
+    jmp oo_fail

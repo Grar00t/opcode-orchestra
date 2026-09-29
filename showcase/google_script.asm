@@ -1,13 +1,13 @@
 ; =============================================================================
 ; google_script.asm — Hardened Manifesto Outputter
-; Linux x86-64, raw syscalls, W^X compliant, partial-write safe
+; Linux x86-64, raw syscalls; linker flags determine W^X permissions.
 ; =============================================================================
 
 BITS 64
 DEFAULT REL
 
 ; -----------------------------------------------------------------------------
-; READ-ONLY DATA SECTION (Mapped as R-- in memory, enforcing NX bit)
+; Read-only data; verify actual load permissions with readelf.
 ; -----------------------------------------------------------------------------
 section .rodata
 
@@ -168,9 +168,11 @@ _start:
     mov     eax, 1              ; sys_write
     syscall
 
-    ; Error handling: sys_write returns -1 on error (rax < 0)
+    ; Linux raw syscalls return -errno, not libc -1. Retry only EINTR.
+    cmp     rax, -4
+    je      .write_loop
     test    rax, rax
-    js      .exit_failure       ; Jump if Sign Flag is set (negative return)
+    jle     .exit_failure       ; Jump if Sign Flag is set (negative return)
 
     ; Handle partial writes: advance buffer, decrease remaining count
     sub     rdx, rax

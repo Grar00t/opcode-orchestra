@@ -1,0 +1,2 @@
+# Verification-only wheel, Linux x86-64 CPython abi3; no DOS runtime dependency.
+unicorn==2.1.4 --hash=sha256:9d6e6dea140560de4ebd8446661f7ef84a357d428c14a3ef09dacd306ec8c239

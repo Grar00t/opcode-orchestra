@@ -3,6 +3,8 @@ ORG 100h
 
 jmp start
 
+%include "status.inc"
+
 %include "vga13.inc"
 %include "font5x7.inc"
 %include "cinematic.inc"
@@ -45,9 +47,12 @@ start:
     pop ds
     cld
     call vga_mode13
+    jc video_failure
     call cinema_palette_init
     call opl_init
+    jc opl_failure
     call opl3_enable
+    jc opl3_failure
     call opl3_stereo_default
     call opl_rhythm_init
 
@@ -68,6 +73,7 @@ start:
     call opl_rhythm_off
     call opl_all_off
     call vga_text_mode
+    call opl_shutdown
     mov ax, 4C00h
     int 21h
 
@@ -387,6 +393,7 @@ scene_landscape:
     ret
 
 draw_spectrum_frame:
+    push bp ; scene_spectrum owns BP as its frame counter
     mov al, CIN_INK
     call vga_clear
     call cinema_frame
@@ -421,6 +428,7 @@ draw_spectrum_frame:
     mov si, txt_score_drives
     call cinema_lower_third
     call cinema_letterbox
+    pop bp
     ret
 
 scene_spectrum:
@@ -498,3 +506,22 @@ txt_score_drives:      db "THE SCORE DRIVES THE CUT",0
 txt_ledger_remains:    db "THE LEDGER REMAINS",0
 txt_source_claim_scene: db "SOURCE CLAIM SCENE CUT",0
 txt_documentary_mode:  db "ASM DOCUMENTARY MODE",0
+
+video_failure:
+    mov al, OO_VIDEO
+    jmp program_failure
+
+opl_failure:
+    mov al, OO_OPL
+    jmp program_failure
+
+opl3_failure:
+    mov al, OO_OPL3
+    jmp program_failure
+
+program_failure:
+    push ax
+    call opl_shutdown
+    call vga_text_mode
+    pop ax
+    jmp oo_fail

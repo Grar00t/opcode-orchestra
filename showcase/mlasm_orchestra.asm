@@ -3,6 +3,8 @@ ORG 100h
 
 jmp start
 
+%include "status.inc"
+
 %include "vga13.inc"
 %include "font5x7.inc"
 %include "media_ops.inc"
@@ -20,10 +22,14 @@ start:
     cld
 
     call vga_mode13
+    jc video_failure
     mov si, scene
+    mov di, scene_end
     call media_execute
+    jc media_failure
 
     call opl_init
+    jc opl_failure
     mov ax, N_C
     mov cx, 18
     call opl_play
@@ -42,6 +48,7 @@ start:
     int 16h
 
     call vga_text_mode
+    call opl_shutdown
     mov ax, 4C00h
     int 21h
 
@@ -115,3 +122,22 @@ scene_end:
 %if (scene_end - scene) > 2048
     %error "MLAsm showcase exceeds 2 KiB scene contract"
 %endif
+
+video_failure:
+    mov al, OO_VIDEO
+    jmp program_failure
+
+opl_failure:
+    mov al, OO_OPL
+    jmp program_failure
+
+media_failure:
+    mov al, OO_MEDIA
+    jmp program_failure
+
+program_failure:
+    push ax
+    call opl_shutdown
+    call vga_text_mode
+    pop ax
+    jmp oo_fail

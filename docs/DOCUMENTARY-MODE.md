@@ -1,47 +1,56 @@
-# Documentary Mode
+# Documentary ledger and runtime
 
-Opcode Orchestra can describe a documentary as Assembly source.
-There is no JSON or JSONL in the canonical story path.
+The NASM ledger relates declared sources, claims and scenes. A source ID/tag
+records an association, not proof that a source is truthful. Confidence is an
+author-supplied integer, not a calibrated probability or audit verdict.
 
-```text
-source -> claim -> scene -> cut
-```
+## ODOC version 1
 
-The documentary ledger is compiled by NASM into a compact `.odoc` binary.
-NASM also enforces source/claim/scene counts and total runtime.
+The 14-byte header is ASCII `ODOC`, then five little-endian u16 fields:
+version=1, source_count, claim_count, scene_count, runtime_cs. Counts are 1..255;
+runtime is 1..65535. Records are packed with no padding:
 
-## Why this exists
+| Type | Bytes | Fields after type |
+|---|---|---|
+| 1: source | 5 | id u8, source_kind u8, tag u16 |
+| 2: claim | 4 | id u8, source_id u8, confidence u8 |
+| 4: scene | 7 | id u8, claim_id u8, style u8, camera u8, duration_cs u16 |
+| 255: end | 1 | None; must end the file |
 
-The goal is not to clone another notebook UI. The goal is a source-grounded documentary compiler where every scene can be traced back to an explicit claim and source ID.
+IDs are 1..255 and unique within their record type. Referenced sources/claims
+must have been declared earlier. Source kind is 1..3; confidence 0..100;
+scene duration 1..65535; style 1..5; camera 0..4. NASM rejects invalid ranges,
+missing/duplicate IDs, count drift, runtime drift, nested declarations and bad
+scope. Canonical finalization rejects a missing END. No ledger checksum was
+added to the v1 file itself; hashes are supplied by artifact inspection and the
+embedding COM's manifest.
 
-## Canonical grammar
+A complete minimal ledger:
 
 ```asm
-DOC_BEGIN 4, 5, 7, 4500
+%include "documentary.inc"
+DOC_BEGIN 1, 1, 1, 100
 DOC_SOURCE 1, DOC_SRC_CODE, 0A31Fh
 DOC_CLAIM 1, 1, 100
-DOC_SCENE 1, 1, 600, DOC_STYLE_TITLE, DOC_CAM_PUSH
+DOC_SCENE 1, 1, 100, DOC_STYLE_TITLE, DOC_CAM_PUSH
 DOC_END
 ```
 
-`4500` means 45.00 seconds because documentary time is measured in centiseconds.
+## Runtime and embedding
 
-## Cinematic runtime
+`make documentary-ledger` assembles the standalone `.odoc`.
+`make documentary` builds the OPL3/VGA executable and its `docfilm.com` alias.
+`verify-documentary` compares the exact bounded embedded ledger against the
+standalone bytes and validates both layouts, counts, references and declared
+runtime. The audit retained the original 104-byte ledger unchanged.
 
-`make documentary` produces `build/documentary.com`. The 16-bit DOS executable uses VGA Mode 13h plus OPL audio and is driven by the same scene durations declared in the Assembly ledger.
+The cinematic path uses an original 16-entry palette, A-Z 5x7 glyphs, letterbox
+and framing primitives, scene drawing and OPL cues. Its spectrum animation is
+procedural: it is not a measurement of rendered audio. The repaired spectrum
+routine preserves the outer scene loop's BP register. Drawing is clipped to
+320x200, but the glyph set is not a complete ASCII renderer.
 
-The runtime currently includes:
-
-- custom 16-color cinematic VGA palette
-- letterbox framing and gold frame treatment
-- title cards and lower thirds
-- deterministic wipe transitions
-- source/claim/scene evidence panels
-- procedural machine and landscape shots
-- audio-reactive spectrum scene
-- OPL3 stereo routing and rhythm cues
-- 4-operator FM coda
-- compile-time choreography drift gates
-- exact `.odoc` ledger embedding gate
-
-The visual language is documentary-inspired, but the implementation and assets are original to Opcode Orchestra.
+4,500 declared centiseconds is a scene-budget contract. DOS scheduling,
+rendering and device-write overhead are not subtracted from that budget.
+A matching ledger does not establish an exact 45-second measured film, the
+truth of documentary claims, audible synthesis, or visual quality.

@@ -2,6 +2,8 @@ BITS 16
 ORG 100h
 jmp start
 
+%include "status.inc"
+
 %include "opl2.inc"
 %include "fnum_notes.inc"
 %include "score.inc"
@@ -13,6 +15,7 @@ start:
     pop ds
     cld
     call opl_init
+    jc opl_failure
     mov al, INSTR_BELL
     call instrument_select
     mov si, score
@@ -28,6 +31,7 @@ start:
     jmp .next
 .done:
     call opl_all_off
+    call opl_shutdown
     mov ax, 4C00h
     int 21h
 
@@ -54,3 +58,13 @@ score:
     EV N_G, 40
     EV R,   40
     SCORE_END
+
+opl_failure:
+    mov al, OO_OPL
+    jmp program_failure
+
+program_failure:
+    push ax
+    call opl_shutdown
+    pop ax
+    jmp oo_fail

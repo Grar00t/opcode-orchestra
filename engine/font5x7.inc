@@ -21,6 +21,12 @@ vga_draw_char5x7:
     push di
     push bp
 
+    cmp bx, VGA_WIDTH
+    jae .done
+    cmp dx, VGA_HEIGHT
+    jae .done
+    test ch, ch
+    jz .done
     mov [font_base_x], bx
     mov [font_base_y], dx
     mov [font_color], cl
@@ -133,3 +139,7 @@ font5x7_data:
     db 11h,11h,0Ah,04h,0Ah,11h,11h ; X
     db 11h,11h,0Ah,04h,04h,04h,04h ; Y
     db 1Fh,01h,02h,04h,08h,10h,1Fh ; Z
+
+%if ($ - font5x7_data) != 26 * 7
+    %error "Font table must contain 26 seven-row glyphs"
+%endif

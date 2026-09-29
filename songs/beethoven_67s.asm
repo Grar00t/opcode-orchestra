@@ -3,6 +3,8 @@ ORG 100h
 
 jmp start
 
+%include "status.inc"
+
 %include "opl2.inc"
 %include "score.inc"
 
@@ -34,9 +36,12 @@ jmp start
 
 
 start:
+    push cs
+    pop ds
     cld
 
     call opl_init
+    jc opl_failure
 
     mov si, score
 
@@ -59,6 +64,7 @@ start:
 .finished:
     call opl_all_off
 
+    call opl_shutdown
     mov ax, 4C00h
     int 21h
 
@@ -212,3 +218,13 @@ score:
     EV N_C,  266
 
     SCORE_END
+
+opl_failure:
+    mov al, OO_OPL
+    jmp program_failure
+
+program_failure:
+    push ax
+    call opl_shutdown
+    pop ax
+    jmp oo_fail

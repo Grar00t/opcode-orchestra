@@ -26,3 +26,29 @@ generated/
 voice/models/
 voice/private/
 *.pth
+
+# Host outputs, binary datasets, model formats, and local credentials
+*.bin
+*.odoc
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.pt
+*.ckpt
+*.safetensors
+*.gguf
+*.pem
+*.key
+*.p12
+*.pfx
+.env
+.env.*
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Optional CI dependencies and verification-only virtual environment
+.audit-deps/
+.audit-tools/

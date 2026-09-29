@@ -12,6 +12,10 @@ INSTR_COUNT equ 4
 INSTR_SIZE  equ 11
 
 instrument_select:
+    cmp al, INSTR_COUNT
+    jae .invalid
+    push ax
+    push bx
     push si
     cmp al, INSTR_BASS
     je .bass
@@ -65,10 +69,17 @@ instrument_select:
     call opl_write
     mov al, 0C0h + __ch
     mov bl, [si + 10]
+    or bl, [opl_pan + __ch]     ; timbre must not erase OPL3 stereo routing
     call opl_write
 %assign __ch __ch + 1
 %endrep
     pop si
+    pop bx
+    pop ax
+    clc
+    ret
+.invalid:
+    stc
     ret
 
 instrument_lead:

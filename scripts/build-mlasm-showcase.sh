@@ -1,61 +1,33 @@
 #!/usr/bin/env bash
+# Optional real MLAsm integration. No downloads and no implicit export.
 set -euo pipefail
-
-MLASM="/home/a/projects/MLAsm"
-ORCH="/home/a/projects/opcode-orchestra"
-WIN_OUT="/mnt/c/Users/A/opcode-orchestra-run"
-
-printf '%s\n' '============================================================'
-printf '%s\n' ' MLASM x OPCODE ORCHESTRA — ASSEMBLY SHOWCASE'
-printf '%s\n' ' no downloads / local build only'
-printf '%s\n' '============================================================'
-
-test -d "$MLASM/.git"
-test -d "$ORCH/.git"
-
-echo '=== 1. BUILD MLASM ==='
-make -C "$MLASM" all >/dev/null
-
-test -s "$MLASM/lib/libmlasm.a"
-echo 'MLASM_BUILD=PASS'
-
-echo '=== 2. BUILD HOST BRIDGE ==='
-mkdir -p "$ORCH/build" "$ORCH/generated" "$WIN_OUT"
-
-gcc -O2 -mavx2 -mfma \
-  -I"$MLASM/include" \
-  "$ORCH/bridge/mlasm_scene.c" \
-  "$MLASM/lib/libmlasm.a" -lm \
-  -o "$ORCH/build/mlasm-scene"
-"$ORCH/build/mlasm-scene" "$ORCH/generated/mlasm_scene.inc" \
-  | tee "$ORCH/build/mlasm-bridge.log"
-
-grep -q '^MLASM_BRIDGE=PASS$' "$ORCH/build/mlasm-bridge.log"
-grep -q '^CPU_SUPPORTED=YES$' "$ORCH/build/mlasm-bridge.log"
-echo 'MLASM_BRIDGE_GATE=PASS'
-
-echo '=== 3. BUILD 16-BIT SHOWCASE ==='
-nasm -Wall \
-  -I "$ORCH/engine/" \
-  -I "$ORCH/generated/" \
-  -f bin "$ORCH/showcase/mlasm_orchestra.asm" \
-  -o "$ORCH/build/mlasm-orchestra.com"
-
-test -s "$ORCH/build/mlasm-orchestra.com"
-strings "$ORCH/build/mlasm-orchestra.com" | grep -q 'FAREWELL WRAPPERS'
-strings "$ORCH/build/mlasm-orchestra.com" | grep -q 'MLASM TO OPCODE ORCHESTRA'
-echo 'ORCHESTRA_MEDIA_GATE=PASS'
-
-echo '=== 4. EXPORT WINDOWS RUN FOLDER ==='
-cp -f "$ORCH/build/mlasm-orchestra.com" "$WIN_OUT/assembly.com"
-cp -f "$ORCH/build/mlasm-bridge.log" "$WIN_OUT/mlasm-bridge.log"
-cp -f "$ORCH/generated/mlasm_scene.inc" "$WIN_OUT/mlasm_scene.inc"
-
-sha256sum "$ORCH/build/mlasm-orchestra.com" \
-  | tee "$WIN_OUT/SHA256.txt"
-echo
-echo 'SHOWCASE_BUILD=PASS'
-echo "DOS_ARTIFACT=$WIN_OUT/assembly.com"
-echo "BRIDGE_LOG=$WIN_OUT/mlasm-bridge.log"
-echo 'RUN_ON_WINDOWS:'
-echo '  powershell -ExecutionPolicy Bypass -File C:\Users\A\run-opcode-showcase.ps1'
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+: "${MLASM_DIR:?Set MLASM_DIR to an inspected local MLAsm checkout}"
+cc=${CC:-cc}
+python=${PYTHON:-python3}
+command -v "$cc" >/dev/null
+command -v "$python" >/dev/null
+command -v "${NASM:-nasm}" >/dev/null
+test -f "$MLASM_DIR/include/ml_assembly.h"
+test -f "$MLASM_DIR/Makefile"
+cd -- "$root"
+"$python" -c 'import sys; sys.path.insert(0,"scripts"); import build; build.build_directory()'
+work=$(mktemp -d "$root/build/.mlasm-XXXXXXXX")
+trap 'rm -rf -- "$work"' EXIT
+# This rebuilds the external library, not its source. Record external flags/version separately.
+make -B -C "$MLASM_DIR" NASM="${NASM:-nasm}" CC="$cc" CPU_FEATURES= \
+    ASM_FLAGS='-f elf64' CC_FLAGS='-std=c99 -Wall -Wextra -O2 -mavx2 -mfma' lib/libmlasm.a
+"$cc" -std=c11 -O2 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+    -I "$MLASM_DIR/include" "$root/bridge/mlasm_scene.c" \
+    "$MLASM_DIR/lib/libmlasm.a" -lm -o "$work/mlasm-scene"
+"$work/mlasm-scene" "$work/mlasm_scene.inc" > "$work/bridge.log"
+"$work/mlasm-scene" "$work/repeat.inc" > "$work/repeat.log"
+cmp "$work/mlasm_scene.inc" "$work/repeat.inc"
+test ! -L "$root/build/generated"
+mkdir -p -- "$root/build/generated"
+mv -f -- "$work/mlasm_scene.inc" "$root/build/generated/mlasm_scene.inc"
+mv -f -- "$work/mlasm-scene" "$root/build/mlasm-scene"
+mv -f -- "$work/bridge.log" "$root/build/mlasm-bridge.log"
+"$python" scripts/build.py build mlasm
+"$python" scripts/build.py verify mlasm
+printf '%s\n' 'MLASM_INTEGRATION=PASS EXPORT=NOT_REQUESTED'

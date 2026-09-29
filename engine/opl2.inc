@@ -1,6 +1,6 @@
 ; =============================================================================
-; Opcode Orchestra — known-good AdLib / OPL2 engine
-; Based on the raw port-388h test verified audible on DOSBox-X.
+; Opcode Orchestra - AdLib / OPL2 engine
+; Register behavior is tested separately from audible/hardware behavior.
 ;
 ; Timing:
 ;   DOS INT 21h / AH=2Ch
@@ -14,7 +14,15 @@
 ; No PC speaker.
 ; =============================================================================
 
+%include "contracts.inc"
+%include "isa_delay.inc"
+REQUIRE_OPL_ALLOCATION 2, 7, 0, 0
 OPL_PORT equ 0388h
+OPL_ADDRESS_READS equ 6
+OPL_DATA_READS equ 35
+opl_kind db 0                  ; 0 absent/unknown, 2 OPL2, 3 OPL3 status signature
+opl3_active db 0
+opl_pan times 9 db 0
 
 ; -----------------------------------------------------------------------------
 ; AL = register
@@ -22,30 +30,135 @@ OPL_PORT equ 0388h
 ; -----------------------------------------------------------------------------
 
 opl_write:
+    push dx
+    mov dx, OPL_PORT
+    call opl_write_port
+    pop dx
+    ret
+
+; AL=register, BL=data, DX=address port (388h or 38Ah).
+; All GP and segment registers preserved. Flags undefined; IF/DF unchanged.
+opl_write_port:
     push ax
     push cx
     push dx
-
-    mov dx, OPL_PORT
     out dx, al
-
-    mov cx, 6
+    mov cx, OPL_ADDRESS_READS
 .addr_delay:
     in al, dx
     loop .addr_delay
-
     inc dx
     mov al, bl
     out dx, al
-
     dec dx
-    mov cx, 35
+    mov cx, OPL_DATA_READS
 .data_delay:
     in al, dx
     loop .data_delay
-
     pop dx
     pop cx
+    pop ax
+    ret
+
+; Timer/status detection. Owns timers, not safe alongside an OPL TSR.
+; AL=2/3, CF=0 on recognized signature; AL=0, CF=1 otherwise.
+opl_detect:
+    push bx
+    push cx
+    push dx
+    mov byte [opl_kind], 0
+    mov al, 04h
+    mov bl, 60h
+    call opl_write
+    mov bl, 80h
+    call opl_write
+    mov dx, OPL_PORT
+    in al, dx
+    mov ch, al
+    and al, 0e0h
+    jnz .fail
+    mov al, 02h
+    mov bl, 0ffh
+    call opl_write
+    mov al, 04h
+    mov bl, 21h
+    call opl_write
+    push cx
+    mov cx, 200
+    call isa_delay_min
+    pop cx
+    jc .fail
+    in al, dx
+    and al, 0e0h
+    cmp al, 0c0h
+    jne .fail
+    and ch, 06h
+    mov cl, 3
+    cmp ch, 0
+    je .found
+    cmp ch, 06h
+    jne .fail
+    mov cl, 2
+.found:
+    mov [opl_kind], cl
+.fail:
+    mov al, 04h
+    mov bl, 60h
+    call opl_write
+    mov bl, 80h
+    call opl_write
+    mov al, [opl_kind]
+    cmp al, 1                  ; CF iff absent (0)
+    pop dx
+    pop cx
+    pop bx
+    ret
+
+; Silence all owned channels and leave compatibility mode, not the previous song.
+; All GP registers preserved. Called on every normal/error exit after detection.
+opl_shutdown:
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    cmp byte [opl_kind], 0
+    je .done
+    mov al, 0bdh
+    xor bl, bl
+    call opl_write
+    mov al, 0b0h
+    mov cx, 9
+.off0:
+    call opl_write
+    inc al
+    loop .off0
+    cmp byte [opl_kind], 3
+    jne .clear
+    mov dx, 038ah
+    mov al, 0b0h
+    mov cx, 9
+.off1:
+    call opl_write_port
+    inc al
+    loop .off1
+    mov al, 04h
+    call opl_write_port
+    mov al, 05h
+    call opl_write_port
+.clear:
+    mov byte [opl3_active], 0
+    xor si, si
+    mov cx, 9
+.pan:
+    mov byte [opl_pan + si], 0
+    inc si
+    loop .pan
+.done:
+    pop si
+    pop dx
+    pop cx
+    pop bx
     pop ax
     ret
 
@@ -95,21 +208,22 @@ wait_cs:
     mov si, cx
     test si, si
     jz .done
-
     call clock_cs
     mov bx, ax
-
 .wait:
     call clock_cs
-
+    mov dx, ax
     sub ax, bx
-    jns .positive
-
+    jnc .positive
     add ax, 6000
-
 .positive:
+    ; Consume each observed delta, rather than comparing a full-minute
+    ; duration against a value that can only be 0..5999.
+    mov bx, dx
     cmp ax, si
-    jb .wait
+    jae .done
+    sub si, ax
+    jmp .wait
 
 .done:
     pop di
@@ -122,7 +236,7 @@ wait_cs:
 
 ; -----------------------------------------------------------------------------
 ; Key all three voices off.
-; Release rate is non-zero now: no ten-second zombie note.
+; The envelope release time is not measured by this routine.
 ; -----------------------------------------------------------------------------
 
 opl_all_off:
@@ -157,6 +271,9 @@ opl_all_off:
 ; -----------------------------------------------------------------------------
 
 opl_init:
+    call opl_detect
+    jc .failed
+    call opl_shutdown
     call opl_all_off
 
     ; waveform select enable
@@ -309,6 +426,8 @@ opl_init:
     mov bl, 04h
     call opl_write
 
+    clc
+.failed:
     ret
 
 ; -----------------------------------------------------------------------------
@@ -321,6 +440,8 @@ opl_init:
 ; -----------------------------------------------------------------------------
 
 opl_key_on:
+    cmp ax, 1023
+    ja .invalid
     push ax
     push bx
     push si
@@ -366,6 +487,10 @@ opl_key_on:
     pop si
     pop bx
     pop ax
+    clc
+    ret
+.invalid:
+    stc
     ret
 
 ; -----------------------------------------------------------------------------
