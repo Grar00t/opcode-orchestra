@@ -2,6 +2,8 @@ BITS 16
 ORG 100h
 jmp start
 
+%include "status.inc"
+
 %include "vga13.inc"
 %include "opl2.inc"
 %include "fnum_notes.inc"
@@ -17,11 +19,14 @@ start:
     pop ds
     cld
     call vga_mode13
+    jc video_failure
     mov al, 0
     call vga_clear
 
     call opl_init
+    jc opl_failure
     call opl3_enable
+    jc opl3_failure
     call opl3_stereo_default
     call opl_rhythm_init
 
@@ -83,5 +88,25 @@ start:
     call opl_rhythm_off
     call opl_all_off
     call vga_text_mode
+    call opl_shutdown
     mov ax, 4C00h
     int 21h
+
+video_failure:
+    mov al, OO_VIDEO
+    jmp program_failure
+
+opl_failure:
+    mov al, OO_OPL
+    jmp program_failure
+
+opl3_failure:
+    mov al, OO_OPL3
+    jmp program_failure
+
+program_failure:
+    push ax
+    call opl_shutdown
+    call vga_text_mode
+    pop ax
+    jmp oo_fail

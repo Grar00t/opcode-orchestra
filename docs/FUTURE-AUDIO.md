@@ -1,32 +1,17 @@
-# Future Audio Pack
+# Audio backends
 
-Opcode Orchestra now exposes a layered audio architecture instead of a single fixed OPL2 voice.
+The current implementation contains four OPL2 instrument patches, OPL3 routing,
+a bank-zero 4-operator pair 0+3, rhythm operators on channels 6..8, a separate
+SB16 8-bit PCM/DMA demonstration and public-domain score studies. These are
+Assembly implementations, not recorded playback wrappers.
 
-## Implemented source capabilities
+`future-audio.com` requires OPL3. The PC-speaker helper is separate and not an
+automatic fallback. The PCM demonstration requires DSP4.x/base220/DMA1 and the
+compiled IRQ. Unsupported devices produce an explicit error, not a different
+performance silently substituted for the requested one.
 
-- OPL2 instrument bank with four timbres
-- OPL3 enable path
-- left / center / right stereo routing
-- OPL3 4-operator pair 0+3 configuration
-- OPL rhythm-mode percussion
-- Sound Blaster DSP reset + 8-bit single-cycle DMA PCM path
-- two additional public-domain score studies
-- audio-reactive VGA showcase driven by the same ASM program
-
-## Boundaries
-
-Build success proves source consistency, register contracts, and binary generation. It does not by itself prove audible correctness on every real card or emulator.
-
-Hardware/emulator verification should be reported separately for OPL3, rhythm mode, and Sound Blaster DMA.
-
-## Backend map
-
-```text
-ASM score / dataset
-        |
-        +--> OPL2 instruments
-        +--> OPL3 stereo / 4-op
-        +--> OPL rhythm percussion
-        +--> SB 8-bit PCM DMA
-        +--> VGA synchronized visuals
-```
+Visual changes are driven by program state, not an audio-capture analyzer.
+Source/static/instruction tests cover declarations and register/control-flow
+behavior. DOS execution tests establish selected guest outcomes. Synthesized
+sound, stereo perception, pitch accuracy, electrical timing and real-card
+behavior must be evaluated separately as described in [HARDWARE.md](HARDWARE.md).

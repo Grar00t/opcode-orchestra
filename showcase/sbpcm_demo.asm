@@ -3,13 +3,12 @@ ORG 100h
 jmp start
 
 %include "sbpcm.inc"
+%include "status.inc"
 
 start:
     push cs
     pop ds
     cld
-    call sb_dsp_reset
-    jc .fail
 
     mov si, pcm_wave
     mov cx, pcm_wave_end - pcm_wave
@@ -22,8 +21,8 @@ start:
     int 21h
 
 .fail:
-    mov ax, 4C02h
-    int 21h
+    mov al, OO_PCM
+    jmp oo_fail
 
 ; 256 unsigned 8-bit samples: repeated synthetic cycle.
 pcm_wave:

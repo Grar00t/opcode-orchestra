@@ -1,21 +1,93 @@
-name: build
+name: build-and-verify
 
 on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  nasm:
-    runs-on: ubuntu-latest
-
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LC_ALL: C
+      CC: clang
+      MLASM_DIR: ${{ github.workspace }}/.audit-deps/MLAsm
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install NASM
+      - name: Checkout project
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Checkout optional bridge dependency
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Grar00t/MLAsm
+          ref: 16e5598ad8b4870f95cf19b9f413050b87cffd34
+          path: .audit-deps/MLAsm
+          persist-credentials: false
+      - name: Install build and verification tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm make
-
-      - name: Build and verify
-        run: make verify
+          sudo apt-get install --no-install-recommends -y nasm make clang binutils shellcheck dosbox python3-venv
+          python3 -m venv .audit-tools
+          .audit-tools/bin/python -m pip install --require-hashes --only-binary=:all: -r tests/requirements-cpu.txt
+          echo "$GITHUB_WORKSPACE/.audit-tools/bin" >> "$GITHUB_PATH"
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Clean build, syntax, binary and negative tests
+        run: |
+          set -euo pipefail
+          make clean
+          make
+          {
+            uname -a
+            git rev-parse HEAD
+            nasm -v
+            make --version | head -1
+            clang --version | head -1
+            python3 --version
+            shellcheck --version
+            actionlint --version
+            dosbox -version
+          } > build/toolchain.log
+          make verify verify-future 2>&1 | tee build/entrypoints.log
+          make -j4 check 2>&1 | tee build/check.log
+          actionlint -color
+          make verify-cpu 2>&1 | tee build/cpu.log
+      - name: Real bridge and sanitizer fault tests
+        run: |
+          set -euo pipefail
+          make verify-bridge 2>&1 | tee build/bridge.log
+      - name: Reproducibility and DOS execution
+        run: |
+          set -euo pipefail
+          make reproducible 2>&1 | tee build/reproducible.log
+          make verify-emulator 2>&1 | tee build/emulator.log
+          make inspect > build/artifacts.tsv
+      - name: Publication policy and clean-tree gate
+        run: |
+          bash scripts/publish-repo.sh --check
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=normal)"
+      - name: Upload only intended verification records
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verification-${{ github.sha }}
+          path: |
+            build/toolchain.log
+            build/entrypoints.log
+            build/check.log
+            build/cpu.log
+            build/bridge.log
+            build/reproducible.log
+            build/emulator.log
+            build/artifacts.tsv
+          if-no-files-found: warn
+          retention-days: 14

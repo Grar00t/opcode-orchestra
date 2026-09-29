@@ -1,74 +1,56 @@
 #!/usr/bin/env bash
+# Optional local voice tooling, never part of the Assembly or publication build.
 set -euo pipefail
-
-ROOT="${ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-VOICE="$ROOT/voice"
-
-TTS_EXE="${TTS_EXE:-/mnt/d/AI/venvs/tts/Scripts/tts.exe}"
-MODEL_DIR="${MODEL_DIR:-/mnt/c/Users/A/AppData/Local/tts/tts_models--multilingual--multi-dataset--xtts_v2}"
-TEXT="${TEXT:-$VOICE/selective_fear_spoken.txt}"
-SPEAKER="${SPEAKER:-$VOICE/speaker.wav}"
-SPEAKER_IDX="${SPEAKER_IDX:-}"
-OUT="${OUT:-$VOICE/raw/selective-fear-xtts.wav}"
-
-echo "============================================================"
-echo "OPCODE ORCHESTRA — OPTIONAL LOCAL XTTS VOICE RENDER"
-echo "MODEL=XTTS_V2"
-echo "ASM_NATIVE_CORE=NO"
-echo "============================================================"
-
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+: "${TTS_EXE:?Set TTS_EXE to an inspected local executable}"
+: "${MODEL_DIR:?Set MODEL_DIR to an existing local XTTS model directory}"
+backend=${TTS_BACKEND:-native}
+text=${TEXT:-$root/voice/selective_fear_spoken.txt}
+speaker=${SPEAKER:-$root/voice/speaker.wav}
+speaker_idx=${SPEAKER_IDX:-}
 test -x "$TTS_EXE"
-test -f "$MODEL_DIR/model.pth"
-test -f "$MODEL_DIR/config.json"
-test -f "$MODEL_DIR/vocab.json"
-test -f "$TEXT"
-if pgrep -af '[n]iyah-train' >/dev/null; then
-    echo "NIYAH_TRAINING_ACTIVE=YES"
-    echo "XTTS_STARTED=NO"
-    exit 20
-fi
-
-echo "NIYAH_TRAINING_ACTIVE=NO"
-
-if [ -z "$SPEAKER_IDX" ] && [ ! -f "$SPEAKER" ]; then
-    echo "NO_SPEAKER_SOURCE=YES"
-    echo "Set SPEAKER_IDX or provide an original/authorized SPEAKER file."
-    echo "XTTS_STARTED=NO"
+for name in model.pth config.json vocab.json; do test -f "$MODEL_DIR/$name"; done
+test -f "$text"
+# Preserve the existing training-interlock default. pgrep errors must not mean idle.
+set +e
+pgrep -f -- "${TRAINING_PATTERN:-[n]iyah-train}" >/dev/null
+active=$?
+set -e
+case "$active" in
+    0) printf '%s\n' 'TRAINING_ACTIVE=YES XTTS_STARTED=NO'; exit 20 ;;
+    1) ;;
+    *) printf '%s\n' 'TRAINING_CHECK=FAILED XTTS_STARTED=NO' >&2; exit 22 ;;
+esac
+if [[ -z "$speaker_idx" && ! -f "$speaker" ]]; then
+    printf '%s\n' 'An original/authorized SPEAKER or SPEAKER_IDX is required.' >&2
     exit 21
 fi
-
-TEXT_WIN="$(wslpath -w "$TEXT")"
-if [ -f "$SPEAKER" ]; then
-    SPEAKER_WIN="$(wslpath -w "$SPEAKER")"
-else
-    SPEAKER_WIN=""
+if [[ "$backend" != native && "$backend" != wsl-windows ]]; then
+    printf '%s\n' 'TTS_BACKEND must be native or wsl-windows' >&2; exit 2
 fi
-OUT_WIN="$(wslpath -w "$OUT")"
-MODEL_WIN="$(wslpath -w "$MODEL_DIR")"
-
-mkdir -p "$(dirname "$OUT")"
-echo "TEXT=$TEXT"
-echo "SPEAKER=$SPEAKER"
-echo "OUTPUT=$OUT"
-
-ARGS=(
-    --text "$(tr '\n' ' ' < "$TEXT" | sed 's/  */ /g')"
-    --model_path "$MODEL_WIN\\model.pth"
-    --config_path "$MODEL_WIN\\config.json"
-    --language_idx en
-    --out_path "$OUT_WIN"
-)
-
-if [ -n "$SPEAKER_IDX" ]; then
-    ARGS+=(--speaker_idx "$SPEAKER_IDX")
+test ! -L "$root/voice"
+test ! -L "$root/voice/raw"
+mkdir -p -- "$root/voice/raw"
+work=$(mktemp -d "$root/voice/raw/.render-XXXXXXXX")
+trap 'rm -rf -- "$work"' EXIT
+out="$work/speech.wav"
+convert() {
+    if [[ "$backend" == wsl-windows ]]; then wslpath -w "$1"; else printf '%s\n' "$1"; fi
+}
+args=(--text "$(tr '\n' ' ' < "$text")"
+      --model_path "$(convert "$MODEL_DIR/model.pth")"
+      --config_path "$(convert "$MODEL_DIR/config.json")"
+      --language_idx en --out_path "$(convert "$out")")
+if [[ -n "$speaker_idx" ]]; then
+    args+=(--speaker_idx "$speaker_idx")
 else
-    ARGS+=(--speaker_wav "$SPEAKER_WIN")
+    args+=(--speaker_wav "$(convert "$speaker")")
 fi
-
-"$TTS_EXE" "${ARGS[@]}"
-
-test -s "$OUT"
-
-echo
-echo "XTTS_RENDER=PASS"
-sha256sum "$OUT"
+# Tool output may contain private paths: keep it in the ignored private directory.
+"$TTS_EXE" "${args[@]}" > "$work/render.log" 2>&1
+test -s "$out"
+test ! -L "$out"
+mv -f -- "$out" "$root/voice/raw/selective-fear-xtts.wav"
+mv -f -- "$work/render.log" "$root/voice/raw/render.log"
+printf '%s\n' 'XTTS_PROCESS=PASS OUTPUT=voice/raw/selective-fear-xtts.wav'
+# A nonempty file proves process output, not voice quality, speaker consent, or validity.

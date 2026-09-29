@@ -10,43 +10,50 @@ OPL3_PAN_RIGHT equ 20h
 OPL3_PAN_BOTH  equ 30h
 
 opl3_write1:
-    push ax
-    push cx
     push dx
     mov dx, OPL3_PORT_B
-    out dx, al
-    mov cx, 6
-.addr_delay:
-    in al, dx
-    loop .addr_delay
-    inc dx
-    mov al, bl
-    out dx, al
-    dec dx
-    mov cx, 35
-.data_delay:
-    in al, dx
-    loop .data_delay
+    call opl_write_port
     pop dx
-    pop cx
-    pop ax
     ret
 
 opl3_enable:
+    cmp byte [opl_kind], 3
+    jne .unavailable
+    mov byte [opl3_active], 1
     mov al, 05h
     mov bl, 01h
     call opl3_write1
+    clc
+    ret
+.unavailable:
+    stc
     ret
 ; DL=channel 0..8, BL=OPL3_PAN_*, CL=feedback/connection low nibble
 opl3_set_pan:
+    cmp byte [opl3_active], 1
+    jne .invalid
+    cmp dl, 8
+    ja .invalid
+    test bl, 0cfh
+    jnz .invalid
+    cmp cl, 15
+    ja .invalid
     push ax
-    and bl, 30h
-    and cl, 0Fh
+    push si
+    xor ax, ax
+    mov al, dl
+    mov si, ax
+    mov [opl_pan + si], bl
     or bl, cl
-    mov al, 0C0h
+    mov al, 0c0h
     add al, dl
     call opl_write
+    pop si
     pop ax
+    clc
+    ret
+.invalid:
+    stc
     ret
 
 opl3_stereo_default:
@@ -79,7 +86,27 @@ opl3_4op_disable_all:
 ; Simple 4-op voice using channel pair 0+3.
 opl3_4op_voice_init:
     call opl3_enable
+    jc .done
     call opl3_4op_enable_pair0
+    ; Explicit waveform state for all four operators, not inherited timbre.
+    REQUIRE_OPL_ALLOCATION 3, 6, 1, 1
+%assign __op 0
+%rep 4
+    %if __op = 0
+        %assign __offset 0
+    %elif __op = 1
+        %assign __offset 3
+    %elif __op = 2
+        %assign __offset 8
+    %else
+        %assign __offset 11
+    %endif
+    REQUIRE_OPL_OPERATOR __offset
+    mov al, 0e0h + __offset
+    xor bl, bl
+    call opl_write
+    %assign __op __op + 1
+%endrep
     ; operators: ch0 mod/car = 00/03, ch3 mod/car = 08/0B
     mov al, 20h
     mov bl, 21h
@@ -135,10 +162,16 @@ opl3_4op_voice_init:
     mov al, 0C3h
     mov bl, OPL3_PAN_BOTH | 01h
     call opl_write
+    clc
+.done:
     ret
 
 ; AX = F-number, channels 0+3 form the 4-op voice at block 4.
 opl3_4op_key_on:
+    cmp byte [opl3_active], 1
+    jne .invalid
+    cmp ax, 1023
+    ja .invalid
     push ax
     push bx
     push si
@@ -164,6 +197,10 @@ opl3_4op_key_on:
     pop si
     pop bx
     pop ax
+    clc
+    ret
+.invalid:
+    stc
     ret
 
 opl3_4op_off:

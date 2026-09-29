@@ -11,6 +11,29 @@ DRUM_CYM equ 02h
 DRUM_HH equ 01h
 
 opl_rhythm_init:
+    ; Shared melodic voices use 0..2; rhythm exclusively owns 6..8.
+    REQUIRE_OPL_ALLOCATION 3, 7, 1, 0
+%assign __p 0
+%rep 6
+    REQUIRE_OPL_OPERATOR (16 + __p)
+    mov al, 80h + 16 + __p
+    mov bl, 26h
+    call opl_write
+    mov al, 0e0h + 16 + __p
+    xor bl, bl
+    call opl_write
+    %assign __p __p + 1
+%endrep
+%assign __p 6
+%rep 3
+    mov al, 0b0h + __p
+    xor bl, bl
+    call opl_write
+    mov al, 0c0h + __p
+    mov bl, 30h               ; both OPL3 outputs; ignored in OPL2 mode
+    call opl_write
+    %assign __p __p + 1
+%endrep
     ; Basic percussion operator setup on channels 6..8.
     mov al, 30h
     mov bl, 21h
@@ -92,6 +115,8 @@ opl_rhythm_init:
 
 ; AL = DRUM_* mask, CX = hit length in centiseconds.
 opl_drum_hit:
+    test al, 0e0h
+    jnz .invalid
     push ax
     push bx
     push cx
@@ -106,6 +131,10 @@ opl_drum_hit:
     pop cx
     pop bx
     pop ax
+    clc
+    ret
+.invalid:
+    stc
     ret
 
 opl_rhythm_off:

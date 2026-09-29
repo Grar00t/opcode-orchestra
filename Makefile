@@ -1,156 +1,100 @@
 .RECIPEPREFIX := >
+.DEFAULT_GOAL := all
+.DELETE_ON_ERROR:
 
 NASM ?= nasm
 PYTHON ?= python3
+CC ?= cc
+export NASM
+export LC_ALL := C
+export PYTHONDONTWRITEBYTECODE := 1
 
-MUSIC_TARGET := build/b567.com
-MUSIC_SOURCE := songs/beethoven_67s.asm
-MUSIC_ENGINE := engine/opl2.inc engine/score.inc
+ENGINE := $(wildcard engine/*.inc)
+BUILD_INPUTS := $(ENGINE) Makefile scripts/build.py scripts/artifacts.py
+CORE := b567 wledger ode bach media future documentary sbpcm oplsmoke dataset ledger
+COMS := build/b567.com build/wledger.com build/ode.com build/bach.com build/media-v2.com build/future-audio.com build/documentary.com build/sbpcm.com build/oplsmoke.com
+DATA := build/wledger-dataset.bin build/assembly-documentary.odoc
 
-MEDIA_TARGET := build/media-v2.com
-MEDIA_SOURCE := showcase/media_opcode_v2.asm
-MEDIA_ENGINE := engine/vga13.inc engine/font5x7.inc engine/media_ops.inc
-MEDIA_TEST := tests/media_opcode_static.py
+.PHONY: all media score dataset future-audio documentary-ledger documentary smoke core clean verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger verify-documentary verify-all verify-contracts verify-parsers verify-cpu verify-shell verify-syntax verify-bridge verify-linux verify-emulator check reproducible inspect
 
-ASM_SCORE_TARGET := build/wledger.com
-ASM_SCORE_SOURCE := songs/wrapper_ledger_theme.asm
-ASM_SCORE_ENGINE := engine/opl2.inc engine/score.inc
+all: build/b567.com
+media: build/media-v2.com
+score: build/wledger.com
+dataset: build/wledger-dataset.bin
+future-audio: build/future-audio.com build/future.com build/sbpcm.com build/ode.com build/bach.com
+documentary-ledger: build/assembly-documentary.odoc
+documentary: build/documentary.com build/docfilm.com
+smoke: build/oplsmoke.com
+core: $(COMS) $(DATA) build/future.com build/docfilm.com
 
-DATASET_TARGET := build/wledger-dataset.bin
-DATASET_SOURCE := datasets/wrapper_ledger_music_dataset.asm
-DATASET_ENGINE := engine/dataset.inc
-
-FUTURE_TARGET := build/future-audio.com
-FUTURE_SOURCE := showcase/future_audio.asm
-SBPCM_TARGET := build/sbpcm.com
-SBPCM_SOURCE := showcase/sbpcm_demo.asm
-ODE_TARGET := build/ode.com
-BACH_TARGET := build/bach.com
-FUTURE_TEST := tests/future_audio_static.py
-
-DOC_LEDGER_TARGET := build/assembly-documentary.odoc
-DOC_LEDGER_SOURCE := documentary/assembly_beneath_wrapper.asm
-DOC_LEDGER_DATA := documentary/assembly_beneath_wrapper.inc
-DOC_ENGINE := engine/documentary.inc
-
-DOCUMENTARY_TARGET := build/documentary.com
-DOCUMENTARY_SOURCE := showcase/documentary.asm
-DOCUMENTARY_RUNTIME_TEST := tests/documentary_runtime_static.py
-DOCUMENTARY_RUNTIME_ENGINE := engine/vga13.inc engine/font5x7.inc engine/cinematic.inc engine/opl2.inc engine/fnum_notes.inc engine/instruments.inc engine/opl3.inc engine/percussion.inc engine/documentary.inc
-
-.PHONY: all media score dataset future-audio documentary-ledger documentary verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger verify-documentary verify-all clean
-
-all: $(MUSIC_TARGET)
-
-media: $(MEDIA_TARGET)
-
-score: $(ASM_SCORE_TARGET)
-
-dataset: $(DATASET_TARGET)
-
-future-audio: $(FUTURE_TARGET) $(SBPCM_TARGET) $(ODE_TARGET) $(BACH_TARGET)
-
-
-documentary-ledger: $(DOC_LEDGER_TARGET)
-
-documentary: $(DOCUMENTARY_TARGET)
-
-build:
->mkdir -p build
-
-$(MUSIC_TARGET): $(MUSIC_SOURCE) $(MUSIC_ENGINE) | build
->$(NASM) -Wall -I engine/ -f bin $(MUSIC_SOURCE) -o $(MUSIC_TARGET)
->@printf "BUILT %-24s %s bytes\n" "$(MUSIC_TARGET)" "$$(wc -c < $(MUSIC_TARGET))"
-
-$(MEDIA_TARGET): $(MEDIA_SOURCE) $(MEDIA_ENGINE) | build
->$(NASM) -Wall -I engine/ -f bin $(MEDIA_SOURCE) -o $(MEDIA_TARGET)
->@printf "BUILT %-24s %s bytes\n" "$(MEDIA_TARGET)" "$$(wc -c < $(MEDIA_TARGET))"
-
-$(ASM_SCORE_TARGET): $(ASM_SCORE_SOURCE) $(ASM_SCORE_ENGINE) | build
->$(NASM) -Wall -I engine/ -f bin $(ASM_SCORE_SOURCE) -o $(ASM_SCORE_TARGET)
->@printf "BUILT %-24s %s bytes\n" "$(ASM_SCORE_TARGET)" "$$(wc -c < $(ASM_SCORE_TARGET))"
-
-$(DATASET_TARGET): $(DATASET_SOURCE) $(DATASET_ENGINE) | build
->$(NASM) -Wall -I engine/ -f bin $(DATASET_SOURCE) -o $(DATASET_TARGET)
->@printf "BUILT %-24s %s bytes\n" "$(DATASET_TARGET)" "$$(wc -c < $(DATASET_TARGET))"
-
-$(FUTURE_TARGET): $(FUTURE_SOURCE) engine/opl2.inc engine/opl3.inc engine/instruments.inc engine/percussion.inc engine/vga13.inc engine/fnum_notes.inc | build
->$(NASM) -Wall -I engine/ -f bin $(FUTURE_SOURCE) -o $(FUTURE_TARGET)
-
-$(SBPCM_TARGET): $(SBPCM_SOURCE) engine/sbpcm.inc | build
->$(NASM) -Wall -I engine/ -f bin $(SBPCM_SOURCE) -o $(SBPCM_TARGET)
-
-$(ODE_TARGET): songs/ode_to_joy.asm engine/opl2.inc engine/instruments.inc engine/fnum_notes.inc engine/score.inc | build
->$(NASM) -Wall -I engine/ -f bin songs/ode_to_joy.asm -o $(ODE_TARGET)
-
-$(BACH_TARGET): songs/bach_c_major_fragment.asm engine/opl2.inc engine/instruments.inc engine/fnum_notes.inc engine/score.inc | build
->$(NASM) -Wall -I engine/ -f bin songs/bach_c_major_fragment.asm -o $(BACH_TARGET)
-
-$(DOC_LEDGER_TARGET): $(DOC_LEDGER_SOURCE) $(DOC_LEDGER_DATA) $(DOC_ENGINE) | build
->$(NASM) -Wall -I engine/ -I documentary/ -f bin $(DOC_LEDGER_SOURCE) -o $(DOC_LEDGER_TARGET)
->@printf "BUILT %-24s %s bytes\n" "$(DOC_LEDGER_TARGET)" "$$(wc -c < $(DOC_LEDGER_TARGET))"
-
-$(DOCUMENTARY_TARGET): $(DOCUMENTARY_SOURCE) $(DOCUMENTARY_RUNTIME_ENGINE) $(DOC_LEDGER_DATA) | build
->$(NASM) -Wall -I engine/ -I documentary/ -f bin $(DOCUMENTARY_SOURCE) -o $(DOCUMENTARY_TARGET)
->@printf "BUILT %-24s %s bytes\n" "$(DOCUMENTARY_TARGET)" "$$(wc -c < $(DOCUMENTARY_TARGET))"
+build/b567.com: songs/beethoven_67s.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build b567
+build/wledger.com: songs/wrapper_ledger_theme.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build wledger
+build/ode.com: songs/ode_to_joy.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build ode
+build/bach.com: songs/bach_c_major_fragment.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build bach
+build/media-v2.com: showcase/media_opcode_v2.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build media
+build/future-audio.com build/future.com &: showcase/future_audio.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build future
+build/documentary.com build/docfilm.com &: showcase/documentary.asm documentary/assembly_beneath_wrapper.inc $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build documentary
+build/sbpcm.com: showcase/sbpcm_demo.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build sbpcm
+build/oplsmoke.com: tests/opl2_smoke.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build oplsmoke
+build/wledger-dataset.bin: datasets/wrapper_ledger_music_dataset.asm $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build dataset
+build/assembly-documentary.odoc: documentary/assembly_beneath_wrapper.asm documentary/assembly_beneath_wrapper.inc $(BUILD_INPUTS)
+>$(PYTHON) scripts/build.py build ledger
 
 verify: all
->@test -s $(MUSIC_TARGET)
->@grep -q "SCORE_BEGIN 6700" $(MUSIC_SOURCE)
->@grep -q "SCORE_END" $(MUSIC_SOURCE)
->@echo "BUILD_GATE=PASS"
->@echo "SCORE_RUNTIME=67.00_SECONDS"
->@sha256sum $(MUSIC_TARGET)
-
+>$(PYTHON) scripts/build.py verify b567
 verify-media: media
->@test -s $(MEDIA_TARGET)
->$(PYTHON) $(MEDIA_TEST)
->@echo "MEDIA_BUILD_GATE=PASS"
->@echo "MEDIA_FORMAT=OPCODE_V2"
->@echo "VIDEO_MODE=13H_320x200x256"
->@sha256sum $(MEDIA_TARGET)
-
+>$(PYTHON) tests/media_opcode_static.py
 verify-score: score
->@test -s $(ASM_SCORE_TARGET)
->@grep -q "SCORE_BEGIN 2400" $(ASM_SCORE_SOURCE)
->@grep -q "SCORE_END" $(ASM_SCORE_SOURCE)
+>$(PYTHON) scripts/build.py verify wledger
 >bash tests/asm_score_gate.sh
->@echo "ASM_SCORE_GATE=PASS"
->@echo "ASM_SCORE_FORMAT=NASM_NATIVE"
->@echo "SCORE_RUNTIME=24.00_SECONDS"
->@sha256sum $(ASM_SCORE_TARGET)
-
 verify-dataset: dataset
->@test -s $(DATASET_TARGET)
+>$(PYTHON) scripts/build.py verify dataset
 >bash tests/asm_dataset_gate.sh
->@echo "ASM_DATASET_GATE=PASS"
->@echo "ASM_DATASET_FORMAT=NASM_NATIVE"
->@sha256sum $(DATASET_TARGET)
-
 verify-future: future-audio
->@test -s $(FUTURE_TARGET)
->@test -s $(SBPCM_TARGET)
->@test -s $(ODE_TARGET)
->@test -s $(BACH_TARGET)
->$(PYTHON) $(FUTURE_TEST)
->@echo "FUTURE_AUDIO_BUILD_GATE=PASS"
->@sha256sum $(FUTURE_TARGET) $(SBPCM_TARGET) $(ODE_TARGET) $(BACH_TARGET)
-
-
+>$(PYTHON) tests/future_audio_static.py
 verify-documentary-ledger: documentary-ledger
->@test -s $(DOC_LEDGER_TARGET)
+>$(PYTHON) scripts/build.py verify ledger
 >bash tests/documentary_gate.sh
-
-
-verify-documentary: documentary verify-documentary-ledger
->@test -s $(DOCUMENTARY_TARGET)
->$(PYTHON) $(DOCUMENTARY_RUNTIME_TEST)
->@echo "DOCUMENTARY_BUILD_GATE=PASS"
->@echo "DOCUMENTARY_RUNTIME=45.00_SECONDS"
->@sha256sum $(DOCUMENTARY_TARGET)
-
-verify-all: verify verify-media verify-score verify-dataset verify-future verify-documentary
->@echo "OPCODE_ORCHESTRA_GATE=PASS"
-
+verify-documentary: documentary documentary-ledger
+>$(PYTHON) tests/documentary_runtime_static.py
+verify-contracts:
+>$(PYTHON) tests/test_contracts.py
+verify-parsers: core
+>$(PYTHON) tests/test_artifacts.py
+verify-all: core verify-contracts verify-parsers
+>$(PYTHON) scripts/build.py verify $(CORE)
+>$(PYTHON) tests/future_audio_static.py
+>$(PYTHON) tests/documentary_runtime_static.py
+>$(PYTHON) tests/media_opcode_static.py
+verify-cpu:
+>$(PYTHON) tests/cpu_contracts.py
+verify-syntax:
+>$(PYTHON) scripts/check_sources.py syntax
+verify-shell:
+>$(PYTHON) scripts/check_sources.py shell
+>$(PYTHON) tests/test_host_tools.py
+verify-bridge:
+>bash scripts/build-mlasm-showcase.sh
+>$(PYTHON) tests/bridge_contracts.py
+verify-linux:
+>bash scripts/build-linux-showcase.sh
+>$(PYTHON) tests/test_linux_showcase.py
+verify-emulator: core
+>$(PYTHON) tests/dosbox_execution.py
+check: verify-all verify-syntax verify-shell verify-linux
+reproducible:
+>$(PYTHON) scripts/reproduce.py
+inspect: core
+>$(PYTHON) scripts/artifacts.py $(COMS) $(DATA)
 clean:
->rm -rf build
+>$(PYTHON) scripts/build.py clean

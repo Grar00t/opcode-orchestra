@@ -54,6 +54,14 @@ cinema_fill_rect:
     push dx
     push si
     push di
+    cmp ax, VGA_WIDTH
+    jae .done
+    cmp bx, VGA_HEIGHT
+    jae .done
+    mov di, VGA_HEIGHT
+    sub di, bx
+    cmp si, di
+    jae .row
     mov di, si
 .row:
     test di, di
@@ -80,6 +88,12 @@ cinema_text:
     push si
     push di
 .next_char:
+    cmp bx, VGA_WIDTH
+    jae .done
+    cmp dx, VGA_HEIGHT
+    jae .done
+    test ch, ch
+    jz .done
     lodsb
     test al, al
     jz .done
@@ -107,6 +121,16 @@ cinema_vline:
     push bx
     push cx
     push dx
+    push si
+    cmp ax, VGA_WIDTH
+    jae .done
+    cmp bx, VGA_HEIGHT
+    jae .done
+    mov si, VGA_HEIGHT
+    sub si, bx
+    cmp cx, si
+    jbe .loop
+    mov cx, si
 .loop:
     test cx, cx
     jz .done
@@ -118,6 +142,7 @@ cinema_vline:
     dec cx
     jmp .loop
 .done:
+    pop si
     pop dx
     pop cx
     pop bx
