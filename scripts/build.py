@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import artifacts
+import nasm_policy
 
 ROOT = Path(__file__).resolve().parents[1]
 # source, output, feature bits, media stream, PCM sample
@@ -34,7 +35,7 @@ LOCATOR = struct.Struct('<4sHHIHHI')
 
 def source_paths(target: str) -> list[Path]:
     source = TARGETS[target][0]
-    names = {source, 'Makefile', 'scripts/build.py', 'scripts/artifacts.py'}
+    names = {source, 'Makefile', 'scripts/build.py', 'scripts/artifacts.py', 'scripts/nasm_policy.py'}
     names.update(str(p.relative_to(ROOT)) for p in (ROOT / 'engine').glob('*.inc'))
     if target in ('documentary', 'ledger'):
         names.add('documentary/assembly_beneath_wrapper.inc')
@@ -80,8 +81,9 @@ def build(target: str) -> Path:
                            f'%define OO_BUILD_PCM {int(has_pcm)}\n'
                            f'%include "{source}"\n'
                            '%include "manifest.inc"\nOO_FINALIZE\n', encoding='ascii')
-        subprocess.run([assembler, '-w+all', '-Werror', '-I', 'engine/', '-I', 'documentary/',
-                        '-I', 'build/', '-I', 'build/generated/', '-f', 'bin', str(wrapper), '-o', str(output)],
+        subprocess.run([assembler, *nasm_policy.strict_args(assembler, 'reloc-abs-word'),
+                        '-I', 'engine/', '-I', 'documentary/', '-I', 'build/', '-I', 'build/generated/',
+                        '-f', 'bin', str(wrapper), '-o', str(output)],
                        cwd=ROOT, check=True, timeout=60)
         data = output.read_bytes()
         if is_com:

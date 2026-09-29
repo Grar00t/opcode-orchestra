@@ -4,10 +4,13 @@ from pathlib import Path
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import nasm_policy
 
 class Contracts(unittest.TestCase):
     def compile(self, source, expected=None):
@@ -16,14 +19,21 @@ class Contracts(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='opcode-contract-') as directory:
             source_file = Path(directory) / 'case.asm'
             source_file.write_text(source + '\n%define OO_BUILD_COM 0\n%include "manifest.inc"\nOO_FINALIZE\n')
-            result = subprocess.run([nasm, '-w+all', '-Werror', '-I', str(ROOT / 'engine') + '/',
+            result = subprocess.run([nasm, *nasm_policy.strict_args(nasm, 'reloc-abs-word'), '-I', str(ROOT / 'engine') + '/',
                                      '-f', 'bin', str(source_file), '-o', str(Path(directory) / 'case.bin')],
                                     capture_output=True, text=True, timeout=10)
             if expected is None:
                 self.assertEqual(result.returncode, 0, result.stderr)
-            else:
-                self.assertNotEqual(result.returncode, 0, 'invalid declaration was accepted')
-                self.assertIn(expected, result.stderr)
+                return (Path(directory) / 'case.bin').read_bytes()
+            self.assertNotEqual(result.returncode, 0, 'invalid declaration was accepted')
+            self.assertIn(expected, result.stderr)
+            return None
+
+    def test_flat_binary_absolute_label_is_supported(self):
+        # DOS .COM needs ORG-adjusted segment offsets. Rewriting `label` to
+        # `label-$$` changes 0103h into 0003h and is not semantics-preserving.
+        data = self.compile("BITS 16\nORG 100h\nmov dx,label\nlabel: db 0")
+        self.assertEqual(data[:4], b'\xba\x03\x01\x00')
 
     def test_score(self):
         prefix = '%include "score.inc"\n'
