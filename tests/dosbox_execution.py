@@ -26,7 +26,7 @@ def execute(job):
         drive = Path(temporary)
         source = ROOT / 'build' / name
         shutil.copy2(source, drive / name.upper())
-        subprocess.run([os.environ.get('NASM','nasm'), '-w+all', '-Werror', '-f','bin',
+        subprocess.run([os.environ.get('NASM','nasm'), '-w+all', '-Werror', '-w-reloc-abs-word', '-f','bin',
                         f'-DTEST_PROGRAM="{name.upper()}"', str(ROOT/'tests/dos_runner.asm'),
                         '-o',str(drive/'RUNNER.COM')], check=True, capture_output=True, timeout=10)
         config = drive / 'run.conf'

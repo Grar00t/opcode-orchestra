@@ -1,5 +1,17 @@
 # Changes from 5070ae12d1c955d4320a3b0dffe1f025262302c4
 
+## 2026-09-29 follow-up verification
+
+NASM 3.01 compatibility now keeps warnings-as-errors while allowing the specific
+`reloc-abs-word` class required by ordinary 16-bit absolute addresses in flat
+DOS binaries. A regression compiles that exact construct. `.gitattributes`
+forces LF for executable/source text so Windows checkout policy cannot break
+Bash verification or alter source bytes used by deterministic manifests.
+
+A new optional `verify-audio-capture` target uses DOSBox-X `DX-CAPTURE /A /O`
+to validate an actual emulated OPL smoke WAV and DROv2 register stream. This is
+explicitly not a listening test or physical-hardware certification.
+
 ## Runtime repairs
 
 Clipped VGA writes and text origins; restored DF around bulk writes; preserved

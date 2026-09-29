@@ -80,7 +80,7 @@ def build(target: str) -> Path:
                            f'%define OO_BUILD_PCM {int(has_pcm)}\n'
                            f'%include "{source}"\n'
                            '%include "manifest.inc"\nOO_FINALIZE\n', encoding='ascii')
-        subprocess.run([assembler, '-w+all', '-Werror', '-I', 'engine/', '-I', 'documentary/',
+        subprocess.run([assembler, '-w+all', '-Werror', '-w-reloc-abs-word', '-I', 'engine/', '-I', 'documentary/',
                         '-I', 'build/', '-I', 'build/generated/', '-f', 'bin', str(wrapper), '-o', str(output)],
                        cwd=ROOT, check=True, timeout=60)
         data = output.read_bytes()

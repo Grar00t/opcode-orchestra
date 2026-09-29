@@ -65,8 +65,13 @@ if detection, transfer, or cleanup fails. Its public playback call is blocking.
 
 `make verify-emulator` uses **DOSBox 0.74-3**, not DOSBox-X, with headless output.
 It checks guest exit codes and selected restored state. It does not listen to
-sound or inspect rendered frames. DOSBox-X and physical-card compatibility
-remain separate checks.
+sound or inspect rendered frames.
+
+`make verify-audio-capture` is a separate DOSBox-X gate. It runs the raw OPL2
+smoke program through `DX-CAPTURE /A /O`, validates stereo PCM16/WAV structure
+and sustained non-silence, parses DROv2, and requires channel-0 key-on/key-off
+register writes. This establishes emulated synthesized-output capture only; it
+does not establish audible quality or physical-card compatibility.
 
 ## Optional bridge and voice tools
 

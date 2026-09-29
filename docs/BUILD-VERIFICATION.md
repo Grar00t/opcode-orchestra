@@ -6,7 +6,16 @@ Core: GNU Make >=4.3, NASM, Python >=3.10. Host checks additionally use Bash,
 ShellCheck and, for the Linux showcase, x86-64 Linux with GNU `ld`.
 The reference audit used NASM 2.16.01, Make 4.4.1, GCC 14.2, Clang 17,
 Python 3.13.5, ShellCheck 0.9.0, actionlint 1.7.7, Unicorn 2.1.4, and DOSBox
-0.74-3. This is an inventory, not a claim of compatibility with every version.
+0.74-3. A follow-up gate also exercises NASM 3.01 and DOSBox-X 2026.01.02.
+NASM 3.01 reports ordinary 16-bit absolute label addresses in flat `.COM` images
+as `reloc-abs-word`; flat-binary invocations disable only that warning class.
+This is deliberate: `.COM` uses `ORG 100h`, so an absolute label is the load-time
+segment offset. A contract test asserts the emitted `mov dx,label` immediate is
+`0103h`; replacing it with `label-$$` would emit `0003h` unless runtime code
+adds the missing base, and therefore is not a semantics-preserving warning fix.
+The ELF64 showcase separately permits `reloc-rel-dword` for the expected PC-relative
+cross-section reference from `.text` to `.rodata`; the ELF linker resolves it.
+All other NASM warnings remain errors.
 
 On Debian/Ubuntu, the package prerequisites can be installed with:
 
@@ -16,7 +25,7 @@ sudo apt-get install --no-install-recommends -y nasm make python3 python3-venv b
 ```
 
 Run all subsequent commands from the repository root. Tool variables identify
-one executable, not a shell fragment: `NASM`, `PYTHON`, `CC`, and `DOSBOX`.
+one executable, not a shell fragment: `NASM`, `PYTHON`, `CC`, `DOSBOX`, and `DOSBOXX`.
 Their selection and the operating system are trusted. A malicious compiler is
 outside the in-repository threat boundary.
 
@@ -95,6 +104,22 @@ the 67-, 45-, and 24-second declared-score programs. Headless audio is disabled;
 device emulation still runs. Fixed emulated CPU cycles are a configuration, not
 a physical bus/timing guarantee.
 
+## DOSBox-X synthesized-output capture
+
+```sh
+make verify-audio-capture
+```
+
+This optional gate requires DOSBox-X. It runs `oplsmoke.com` with Nuked OPL3
+emulation and `DX-CAPTURE /A /O`. The verifier requires a valid 49,716 Hz
+stereo PCM16 WAV with sustained signal in both channels, no full-scale samples,
+plus a structurally valid DROv2 stream containing exactly one OPL2 channel-0
+key-on and one key-off for the one-note smoke program. It records capture hashes.
+A passing capture proves that this emulator produced non-silent, non-full-scale
+PCM from the exercised register stream; it does not prove release-envelope
+quality, pitch accuracy, perceived quality, analog behavior, bus timing, or
+physical Yamaha/Sound Blaster hardware.
+
 ## Reproducibility policy
 
 `make reproducible` copies only public core source paths into two fresh temporary
@@ -122,7 +147,7 @@ fully hermetic package snapshot.
 | C/ELF execution | `verify-bridge`, `verify-linux` | External-library correctness under every input |
 | Isolated build identity | `reproducible` | Cross-toolchain identity or supply-chain authenticity |
 | DOS emulation | `verify-emulator` | DOSBox-X equivalence, listening, frame appearance, physical compatibility |
-| Audio capture | Saved PCM/FM capture with device/config/hash | Human perception or real-card behavior |
+| Emulated audio capture | `verify-audio-capture` WAV + DROv2 receipts | Human perception, analog output or real-card behavior |
 | Human listening | Recorded listener, passage, observations | Automated timing/electrical proof |
 | Physical hardware | Identified card/system, measured traces, cleanup receipt | Compatibility with untested cards |
 

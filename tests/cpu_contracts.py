@@ -32,7 +32,7 @@ class Machine:
         with tempfile.TemporaryDirectory(prefix='oo-cpu-') as tmp:
             asm = Path(tmp)/'test.asm'; out = Path(tmp)/'test.bin'
             asm.write_text(source, encoding='utf-8')
-            result = subprocess.run([NASM,'-w+all','-Werror','-I',str(ROOT/'engine')+'/',
+            result = subprocess.run([NASM,'-w+all','-Werror','-w-reloc-abs-word','-I',str(ROOT/'engine')+'/',
                                      '-I',str(ROOT/'documentary')+'/', '-f','bin',str(asm),'-o',str(out)], capture_output=True, timeout=20)
             if result.returncode:
                 raise RuntimeError(result.stderr.decode())

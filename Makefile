@@ -15,7 +15,7 @@ CORE := b567 wledger ode bach media future documentary sbpcm oplsmoke dataset le
 COMS := build/b567.com build/wledger.com build/ode.com build/bach.com build/media-v2.com build/future-audio.com build/documentary.com build/sbpcm.com build/oplsmoke.com
 DATA := build/wledger-dataset.bin build/assembly-documentary.odoc
 
-.PHONY: all media score dataset future-audio documentary-ledger documentary smoke core clean verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger verify-documentary verify-all verify-contracts verify-parsers verify-cpu verify-shell verify-syntax verify-bridge verify-linux verify-emulator check reproducible inspect
+.PHONY: all media score dataset future-audio documentary-ledger documentary smoke core clean verify verify-media verify-score verify-dataset verify-future verify-documentary-ledger verify-documentary verify-all verify-contracts verify-parsers verify-cpu verify-shell verify-syntax verify-bridge verify-linux verify-emulator verify-audio-capture check reproducible inspect
 
 all: build/b567.com
 media: build/media-v2.com
@@ -91,6 +91,8 @@ verify-linux:
 >$(PYTHON) tests/test_linux_showcase.py
 verify-emulator: core
 >$(PYTHON) tests/dosbox_execution.py
+verify-audio-capture: build/oplsmoke.com
+>$(PYTHON) tests/dosboxx_audio_capture.py
 check: verify-all verify-syntax verify-shell verify-linux
 reproducible:
 >$(PYTHON) scripts/reproduce.py
