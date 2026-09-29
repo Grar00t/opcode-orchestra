@@ -1,0 +1,33 @@
+name: audit-dosbox-acquisition
+on:
+  push:
+    branches: [audit/hardening-20260929]
+    paths: [.github/workflows/audit-dosbox.yml]
+permissions:
+  contents: read
+jobs:
+  acquire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Export packaged DOSBox with runtime libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y dosbox
+          mkdir -p audit-export/runtime/lib
+          cp /usr/bin/dosbox audit-export/runtime/dosbox
+          ldd /usr/bin/dosbox > audit-export/runtime/ldd.txt
+          awk '/=> \/|^\s*\// {for(i=1;i<=NF;i++) if($i ~ /^\//) print $i}' audit-export/runtime/ldd.txt | while IFS= read -r file; do cp -L "$file" audit-export/runtime/lib/; done
+          dpkg-query -W -f='${Package}\t${Version}\n' dosbox > audit-export/runtime/version.txt
+          tar -cf audit-export/dosbox-runtime.tar -C audit-export/runtime .
+          sha256sum audit-export/dosbox-runtime.tar > audit-export/SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: opcode-dosbox-tool
+          path: |
+            audit-export/dosbox-runtime.tar
+            audit-export/SHA256SUMS
+          retention-days: 7
+          if-no-files-found: error
