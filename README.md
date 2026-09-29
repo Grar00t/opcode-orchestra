@@ -1,12 +1,22 @@
 # Opcode Orchestra
 
-An Assembly-first x86 music and graphics laboratory. NASM compiles scores,
-datasets, documentary ledgers, and DOS programs. The DOS programs use direct
-OPL, VGA, and, in a separate demonstration, Sound Blaster DSP/DMA I/O.
+**I made DOS sing from raw x86 Assembly.**<br>
+Direct OPL2/OPL3 register I/O.<br>
+NASM emits real `.COM` binaries.<br>
+No MIDI player. No JSON score runtime.
 
-Python checks declarations and binary layouts, hashes artifacts, and runs tests;
-it does not synthesize or perform the scores. There is no MIDI player, JSON score
-format, external media engine, or mandatory model dependency.
+**[demo](https://github.com/Grar00t/opcode-orchestra/releases/download/v0.1.0-launch-20260930/demo.mp4) · [build](#build) · [verify](docs/BUILD-VERIFICATION.md#verification-matrix)**
+
+[![DOSBox-X emulation: actual Assembly program and captured OPL FM output](https://github.com/Grar00t/opcode-orchestra/releases/download/v0.1.0-launch-20260930/demo.gif)](https://github.com/Grar00t/opcode-orchestra/releases/download/v0.1.0-launch-20260930/demo.mp4)
+
+The demo is a screen capture of the build and DOSBox-X emulation with its own
+captured FM output. [Source commit, hashes, and verification boundaries](https://github.com/Grar00t/opcode-orchestra/releases/tag/v0.1.0-launch-20260930).
+Physical-card testing and subjective listening quality: **UNKNOWN**.
+
+NASM assembles the executable code and score data. Python orchestrates builds,
+finalizes provenance manifests, hashes artifacts, and runs checks; it does not
+synthesize or perform the scores. The lab also includes VGA and a separate
+Sound Blaster DSP/DMA demonstration. There is no mandatory model dependency.
 
 ## Build
 
