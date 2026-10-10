@@ -41,12 +41,14 @@ DOS_PROGRAMS: dict[str, tuple[str, str]] = {
 
 def tool_requirements(profile: str) -> tuple[tuple[str, str], ...]:
     required = [("GNU Make", "make"), ("NASM", os.environ.get("NASM", "nasm"))]
+    if profile in ("core", "host", "emulator", "cpu", "bridge"):
+        required.append(("Bash", "bash"))
     if profile == "host":
-        required.extend([("Bash", "bash"), ("ShellCheck", "shellcheck"),
+        required.extend([("ShellCheck", "shellcheck"),
                          ("C compiler", os.environ.get("CC", "cc")),
                          ("ELF linker", os.environ.get("LD", "ld"))])
-    if profile == "core":
-        required.append(("Bash", "bash"))
+    if profile == "bridge":
+        required.append(("C compiler", os.environ.get("CC", "cc")))
     if profile == "emulator":
         required.append(("DOSBox", os.environ.get("DOSBOX", "dosbox")))
     if profile == "capture":
