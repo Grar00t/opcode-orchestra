@@ -18,6 +18,26 @@ finalizes provenance manifests, hashes artifacts, and runs checks; it does not
 synthesize or perform the scores. The lab also includes VGA and a separate
 Sound Blaster DSP/DMA demonstration. There is no mandatory model dependency.
 
+## Automated operator commands
+
+The same test gates can be run locally from WSL/Linux, without publishing or
+modifying unrelated projects:
+
+```sh
+python3 scripts/lab.py doctor --profile core
+python3 scripts/lab.py verify --profile core
+python3 scripts/lab.py verify --profile host
+python3 scripts/lab.py play b567
+```
+
+The verifier writes local, gitignored `build/operator-<profile>.json` receipts and
+`build/operator-<profile>.log`. Profiles `emulator`, `capture`, `cpu` and
+`bridge` are opt-in and fail when their prerequisites are missing; no
+verification target infers listening quality or real-hardware compatibility.
+[Operator profiles and Windows/WSL instructions](docs/OPERATOR-RUNBOOK.md).
+The existing [GitHub Actions workflow](.github/workflows/build.yml) runs on
+push and PRs and supports **Run workflow** on demand.
+
 ## Build
 
 The core requires GNU Make 4.3 or newer, NASM, and Python 3.10 or newer.

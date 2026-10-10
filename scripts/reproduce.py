@@ -16,11 +16,20 @@ PUBLIC = {'engine': {'.inc'}, 'songs': {'.asm'}, 'showcase': {'.asm'},
 def snapshot(destination: Path) -> None:
     paths = [ROOT / 'Makefile', ROOT / '.gitignore']
     for directory, suffixes in PUBLIC.items():
-        paths += [p for p in (ROOT / directory).rglob('*') if p.suffix in suffixes and p.is_file()]
+        source_dir = ROOT / directory
+        # Do not follow a top-level symlink to files outside the reviewed checkout.
+        if source_dir.is_symlink():
+            raise ValueError(f'symlink source directory rejected: {directory}')
+        paths += [p for p in source_dir.rglob('*') if p.suffix in suffixes and p.is_file()]
     for path in sorted(paths):
-        if path.is_symlink():
-            raise ValueError(f'symlink source rejected: {path.relative_to(ROOT)}')
-        target = destination / path.relative_to(ROOT)
+        relative = path.relative_to(ROOT)
+        # Also reject symlinked intermediate directories, not only final files.
+        for member in (path, *path.parents):
+            if member == ROOT.parent:
+                break
+            if member.is_symlink():
+                raise ValueError(f'symlink source rejected: {relative}')
+        target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
 
