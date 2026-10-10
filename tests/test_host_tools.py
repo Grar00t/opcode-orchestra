@@ -11,6 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import reproduce
 import publish
 import nasm_policy
+import lab
+from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dosboxx_audio_capture as audio_capture
 
@@ -155,6 +157,60 @@ class HostTools(unittest.TestCase):
             out.writeframes(struct.pack('<' + 'h' * len(samples), *samples))
         with self.assertRaisesRegex(ValueError, 'full-scale clipped'):
             audio_capture.inspect_wav(wav)
+
+    def test_repro_snapshot_rejects_symlinked_directory_before_copying(self):
+        candidate = Path(self.temporary.name) / 'evil-source'
+        candidate.mkdir()
+        (candidate/'Makefile').write_text('.PHONY: all\\nall:\\n\\t@true\\n')
+        (candidate/'.gitignore').write_text('build/\\n')
+        private = Path(self.temporary.name) / 'outside-private'
+        private.mkdir()
+        (private/'secret.inc').write_text('PRIVATE_FIXTURE_DO_NOT_COPY')
+        (candidate/'engine').symlink_to(private, target_is_directory=True)
+        destination = Path(self.temporary.name) / 'destination'
+        with patch.object(reproduce, 'ROOT', candidate):
+            with self.assertRaisesRegex(ValueError, 'symlink source directory'):
+                reproduce.snapshot(destination)
+        self.assertFalse((destination/'engine'/'secret.inc').exists())
+
+    def test_linux_showcase_accepts_nasm_executable_path_with_spaces(self):
+        executable = shutil.which('nasm')
+        self.assertIsNotNone(executable, 'NASM is a required host-check tool')
+        tool_dir = Path(self.temporary.name) / 'tool directory with spaces'
+        tool_dir.mkdir()
+        linked = tool_dir / 'nasm binary'
+        linked.symlink_to(executable)
+        env = os.environ.copy()
+        env['NASM'] = str(linked)
+        result = self.command('bash', 'scripts/build-linux-showcase.sh', env=env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.root / 'build/google-script').exists(), True)
+
+    def test_operator_gate_profiles_do_not_promote_optional_audio_to_core(self):
+        self.assertIn(('make', 'reproducible'), lab.PROFILES['core'])
+        self.assertNotIn(('make', 'verify-audio-capture'), lab.PROFILES['core'])
+        self.assertNotIn(('make', 'verify-emulator'), lab.PROFILES['host'])
+        self.assertIn(('make', 'verify-audio-capture'), lab.PROFILES['capture'])
+        self.assertEqual(lab.DOS_PROGRAMS['docfilm'], ('build/docfilm.com', 'docfilm.com'))
+
+    def test_operator_missing_nasm_fails_closed_and_keeps_receipt(self):
+        env = os.environ.copy()
+        env['NASM'] = '/nonexistent-opcode-assembler'
+        result = self.command(sys.executable, 'scripts/lab.py',
+                              'verify', '--profile', 'core', env=env)
+        self.assertNotEqual(result.returncode, 0)
+        import json
+        record = json.loads((self.root/'build/operator-core.json').read_text())
+        self.assertEqual(record['status'], 'FAIL')
+        self.assertEqual(record['steps'], [])
+        self.assertTrue(len(record['log_sha256']) == 64)
+        self.assertEqual(record['boundaries']['physical_hardware'], 'NOT_TESTED')
+        self.assertEqual(record['boundaries']['audio_capture'], 'NOT_RUN')
+
+    def test_operator_refuses_unapproved_dos_program(self):
+        result = self.command(sys.executable, 'scripts/lab.py', 'play', 'SHELL.COM')
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse((self.root/'build').exists())
 
     def test_optional_tools_fail_without_configuration(self):
         env = os.environ.copy()

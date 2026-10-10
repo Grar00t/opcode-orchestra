@@ -6,7 +6,7 @@ cd -- "$root"
 work=$(mktemp -d "$root/build/.linux-XXXXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 nasm=${NASM:-nasm}
-version=$($nasm -v | awk '{print $3}')
+version=$("$nasm" -v | awk '{print $3}')
 major=${version%%.*}
 minor=${version#*.}; minor=${minor%%[^0-9]*}
 warning_args=()

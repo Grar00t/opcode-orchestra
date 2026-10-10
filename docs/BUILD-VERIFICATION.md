@@ -32,6 +32,16 @@ one executable, not a shell fragment: `NASM`, `PYTHON`, `CC`, `DOSBOX`, and `DOS
 Their selection and the operating system are trusted. A malicious compiler is
 outside the in-repository threat boundary.
 
+## One-command operator automation
+
+`python3 scripts/lab.py doctor --profile core` checks prerequisites without
+installing anything. `python3 scripts/lab.py verify --profile core` executes the
+existing `verify-all`, `reproducible` and `inspect` gates, failing closed on
+missing tools or any unsuccessful command. All receipts remain under ignored
+`build/`. For runnable examples and explicit optional gates, see
+[OPERATOR-RUNBOOK.md](OPERATOR-RUNBOOK.md). GitHub Actions can also be triggered
+manually using `workflow_dispatch`; no periodic schedule is installed.
+
 ## Core and host commands
 
 ```sh
